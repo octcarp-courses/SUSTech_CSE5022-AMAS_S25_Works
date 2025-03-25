@@ -1,0 +1,5 @@
+<context id="TileWorld" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://repast.org/scenario/context">
+    <projection type="grid" id="grid" />
+    <projection type="network" id="path_network" />
+    
+</context>

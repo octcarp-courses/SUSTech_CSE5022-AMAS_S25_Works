@@ -26,3 +26,11 @@ replay_pid*
 ## IDEA ##
 out/
 .idea/
+
+## repast License ##
+repast-licenses/
+
+
+## Binary Output ##
+bin/
+*.zip

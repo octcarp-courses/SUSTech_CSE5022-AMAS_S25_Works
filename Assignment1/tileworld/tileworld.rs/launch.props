@@ -1,0 +1,6 @@
+#
+#Mon Mar 17 22:32:39 CST 2025
+incoming=tcp\://127.0.0.1\:5555
+outgoing=tcp\://127.0.0.1\:5556
+scenario=..\\tileworld.rs
+working.directory=../
