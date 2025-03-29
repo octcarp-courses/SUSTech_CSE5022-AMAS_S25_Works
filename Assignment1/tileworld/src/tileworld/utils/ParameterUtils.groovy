@@ -20,8 +20,14 @@ class ParameterUtils {
         instance
     }
     
+    static void refresh() {
+        instance = new ParameterUtils()
+    }
+    
     private final Parameters parameters = RunEnvironment.instance.parameters
     final int SYSTEM_RANDOM_SEED = getInt("randomSeed", -1)
+    
+    final int HOLE_STRATEGY = getInt("HOLE_STRATEGY", 0)
     
     final int GRID_WIDTH = getInt("GRID_WIDTH", 20)
     final int GRID_HEIGHT = getInt("GRID_HEIGHT", 15)

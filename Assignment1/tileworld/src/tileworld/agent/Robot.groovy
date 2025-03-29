@@ -24,8 +24,10 @@ class Robot implements GridTrait {
 
     private int energy = 100
     private int scoreEarned = 0
+    private int stepFromLastHole = 0
 
     private boolean haveTile = false
+    private HoleStrategy holeStrategy
 
     private final int SENSING_RADIUS = ParameterUtils.instance.SENSING_RADIUS
     private final int ENERGY_WARNING = ParameterUtils.instance.ENERGY_WARNING
@@ -38,10 +40,11 @@ class Robot implements GridTrait {
 
     List<RobotData> robotDataList = []
 
-    Robot(Grid grid, GridPoint location, String id) {
+    Robot(Grid grid, GridPoint location, String id, HoleStrategy holeStrategy) {
         this.grid = grid
         this.location = location
         this.id = id
+        this.holeStrategy = holeStrategy
 
         X = grid.dimensions.width
         Y = grid.dimensions.height
@@ -119,11 +122,11 @@ class Robot implements GridTrait {
 
         if (filteredHoles) {
             holeClaimed?.with { filteredHoles << it }
-            def nearestHole = getBestHole(filteredHoles)
-            if (nearestHole != holeClaimed) {
+            def bestHole = getBestHole(filteredHoles)
+            if (bestHole != holeClaimed) {
                 holeClaimed?.claimed = false
-                nearestHole.claimed = true
-                holeClaimed = nearestHole
+                bestHole.claimed = true
+                holeClaimed = bestHole
             }
         }
 
@@ -191,6 +194,7 @@ class Robot implements GridTrait {
 
         pathList << nextLoc
         --energy
+        ++stepFromLastHole
     }
 
     private void currentLocationOption() {
@@ -207,6 +211,7 @@ class Robot implements GridTrait {
                             haveTile = false
                             scoreEarned += hole.score
                             holeClaimed = null
+                            stepFromLastHole = 0
                         }
                     }
                     break
@@ -226,11 +231,18 @@ class Robot implements GridTrait {
     }
 
     private def <T extends GridTrait> T getClosestObject(List<T> objects) {
-        objects.min { getPathSteps(it) }
+        objects.min { calcPath(it) }
     }
     
     private Hole getBestHole(List<Hole> filteredHoles) {
-        filteredHoles.max { it.score / (getPathSteps(it) + 1) }
+        switch (holeStrategy) {
+            case HoleStrategy.NEAREST:
+                return getClosestObject(filteredHoles)
+            case HoleStrategy.HIGHEST:
+                return filteredHoles.max { it.score }
+            case HoleStrategy.A_STAR:
+                return filteredHoles.max { it.score / (calcPath(it) + stepFromLastHole) }
+        }
     }
 
     private boolean isBlockedMove(int x, int y) {

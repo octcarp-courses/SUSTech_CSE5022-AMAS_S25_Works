@@ -14,7 +14,7 @@ import repast.simphony.space.grid.GridBuilderParameters
 import repast.simphony.space.grid.GridPoint
 import repast.simphony.space.grid.SimpleGridAdder
 import repast.simphony.space.grid.WrapAroundBorders
-
+import tileworld.agent.HoleStrategy
 import tileworld.agent.Robot
 import tileworld.data.DataHandler
 import tileworld.utils.*
@@ -23,7 +23,7 @@ import tileworld.utils.*
 class TileWorldBuilder implements ContextBuilder {
     private Grid grid
     private Context context
-
+    
     private int W
     private int H
     private int NUM_ROBOTS
@@ -34,6 +34,7 @@ class TileWorldBuilder implements ContextBuilder {
     private WorldManager worldManager
     private final List<Robot> robots = []
 
+    private RunListener listener = null
     @Override
     Context build(Context context) {
         this.context = context
@@ -60,7 +61,10 @@ class TileWorldBuilder implements ContextBuilder {
         def gridUtils = GridUtils.instance
         def params = ParameterUtils.instance
         def dataHandler = DataHandler.instance
-
+        
+        params.refresh()
+        dataHandler.refresh()
+        
         W = params.GRID_WIDTH
         H = params.GRID_HEIGHT
         NUM_ROBOTS = params.NUM_ROBOTS
@@ -74,30 +78,30 @@ class TileWorldBuilder implements ContextBuilder {
     private void configRunEnv() {
         RunEnvironment.instance.endAt(SIMULATION_TICKS)
         
-        RunEnvironment.instance.addRunListener(new RunListener() {
-            
-            @Override
-            void stopped() {
-                println "Simulation stopped, collecting data..."
-                DataHandler.instance.dealRobotsData(robots)
+        if (!listener) {
+            listener = new RunListener() {
+                @Override
+                void stopped() {
+                    println "Simulation stopped, collecting data..."
+                    DataHandler.instance.dealRobotsData(robots)
+                }
+    
+                @Override
+                void started() {
+                    println "Simulation started"
+                }
+    
+                @Override
+                void restarted() {
+                    println "Simulation restarted"
+                }
+                @Override
+                void paused() {
+                    println "Simulation paused"
+                }
             }
-
-            @Override
-            void started() {
-                println "Simulation started"
-
-            }
-
-            @Override
-            void restarted() {
-                println "Simulation restarted"
-            }
-
-            @Override
-            void paused() {
-
-            }
-        })
+            RunEnvironment.instance.addRunListener(listener)
+        }
     }
 
     private void addElements() {
@@ -107,7 +111,9 @@ class TileWorldBuilder implements ContextBuilder {
         worldManager.initailDynamicPart()
 
         new NetworkBuilder<>("path_network", context, true).buildNetwork()
-
+        
+        robots.clear()
+        final int holeSId = ParameterUtils.instance.HOLE_STRATEGY
         (1..NUM_ROBOTS).each { i ->
             def (x, y) = [0, 0]
             while (true) {
@@ -118,7 +124,8 @@ class TileWorldBuilder implements ContextBuilder {
                 }
             }
 
-            def robot = new Robot(grid, new GridPoint(x, y), "${i}")
+            int strategyId = (holeSId > 0) ? holeSId : (i - 1) % HoleStrategy.values().length
+            def robot = new Robot(grid, new GridPoint(x, y), "${i}", HoleStrategy.values()[strategyId])
             context << robot
             robot.place()
             robots << robot

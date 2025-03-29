@@ -22,14 +22,6 @@ trait GridTrait {
     void place() {
         grid.moveTo(this, location.x, location.y)
     }
-
-    int getPathSteps(GridPoint otherLocation) {
-        Math.abs(location.x - otherLocation.x) + Math.abs(location.y - otherLocation.y)
-    }
-
-    int getPathSteps(GridTrait other) {
-        getPathSteps(other.location)
-    }
     
     int calcPath(GridPoint other) {
         Math.abs(location.x - other.x) + Math.abs(location.y - other.y)
