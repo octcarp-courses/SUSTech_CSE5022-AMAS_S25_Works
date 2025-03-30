@@ -34,3 +34,6 @@ repast-licenses/
 ## Binary Output ##
 bin/
 *.zip
+
+## tmeporary files ##
+/temp/

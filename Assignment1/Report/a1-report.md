@@ -59,7 +59,7 @@ The robot needs to maintain the sensing result of its surroundings, make decisio
 
 I will explain how to perform specific steps of the simulation. For example, I will show my implement for the agent and environment and how to optimize the robot's performance using different strategies.
 
-Finally, I will base this simulation on *Repast Simphony*.
+Finally, I will base this simulation on *[Repast Simphony](https://repast.github.io/)*.
 
 ### Class Design
 
@@ -94,9 +94,11 @@ Finally, I will base this simulation on *Repast Simphony*.
             StationPlacer.groovy # Calculate Energy Station Location
 ```
 
-My overall design makes the whole system clear.
+In this implementation, I chose to use [*Groovy language*](https://groovy-lang.org/) .
 
-It is easy to add or modify functions to the system, and it is relatively easy to maintain in the future.
+The *Repast Simphony* project natively supports Groovy and Java. Groovy is also a JVM language that follows the object-oriented design paradigm. Groovy is very similar to Java and can be seamlessly integrated with it. It can also omit some complex syntax in Java development, and supports some advanced features, such as type inference, etc. These advantages make it very suitable for simulation of small projects.
+
+My overall design makes the whole system clear. It is easy to add or modify functions to the system, and it is relatively easy to maintain in the future.
 
 This is a good object-oriented *Repast Simphony* model system design.
 
@@ -328,3 +330,11 @@ The `RunEnvironment` instance is initialized only once within a single GUI run, 
 Changing simulation configuration in GUI is inconvenient, unclear, and generates many redundant files.
 
 **Solution**: After becoming familiar with the important parameters and operating principles required for *Repast* configuration, I manually change the necessary information in the relevant `.xml` files. This way is accurate and helps me to deepen the understanding of *Repast* system construction.
+
+### *Repast Simphony* Using
+
+In JVM language development, I prefer [*IntelliJ IDEA*](https://www.jetbrains.com/idea/) for medium or large projects, and [*Visual Studio Code*](https://code.visualstudio.com/) for lightweight projects.
+
+How ever, *Repast Simphony* based on [*Eclipse*](https://www.eclipse.org/) , and add many personalized modules and functions, which means it's very hard to migrate to another IDE or editor. 
+
+So I learn to use Eclipse plugins and configurations to improve it to a development environment that I was used to.
