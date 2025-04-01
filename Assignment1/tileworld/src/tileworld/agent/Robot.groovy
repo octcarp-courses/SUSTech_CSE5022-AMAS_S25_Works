@@ -18,16 +18,18 @@ import tileworld.utils.*
 @Log4j
 @CompileStatic
 class Robot implements GridTrait {
+    private final String id
+    private HoleStrategy holeStrategy
+
     private final int X
     private final int Y
-    private final String id
 
     private int energy = 100
     private int scoreEarned = 0
     private int stepFromLastHole = 0
 
     private boolean haveTile = false
-    private HoleStrategy holeStrategy
+
 
     private final int SENSING_RADIUS = ParameterUtils.instance.SENSING_RADIUS
     private final int ENERGY_WARNING = ParameterUtils.instance.ENERGY_WARNING
@@ -35,8 +37,6 @@ class Robot implements GridTrait {
     private Tile tileClaimed = null
     private Hole holeClaimed = null
     private EnergyStation nearestStation = null
-
-    private final List<GridPoint> pathList = []
 
     List<RobotData> robotDataList = []
 
@@ -48,7 +48,6 @@ class Robot implements GridTrait {
 
         X = grid.dimensions.width
         Y = grid.dimensions.height
-        pathList << location
     }
 
     @ScheduledMethod(start = 1d, interval = 1d)
@@ -57,10 +56,10 @@ class Robot implements GridTrait {
 
         currentLocationOption()
         sensingActions()
-        
+
         def target = determineMovementTarget()
         def targetLocation = determinTargetLocation(target)
-        
+
         simpleMoveTowards(targetLocation)
         double tick = RunEnvironment.instance.currentSchedule.tickCount
         robotDataList << new RobotData(tick, id, scoreEarned, energy, location, targetLocation)
@@ -68,7 +67,7 @@ class Robot implements GridTrait {
         log.debug "============================"
     }
 
-    
+
     private GridPoint determinTargetLocation(GridTrait target) {
         if (target) {
             return target.location
@@ -78,26 +77,26 @@ class Robot implements GridTrait {
         }
         return location
     }
-    
+
     private GridTrait determineMovementTarget() {
         nearestStation?.with {
             if (energy - 15 < calcPath(it)) {
                 return it
             }
         }
-        
+
         if (energy < ENERGY_WARNING) {
             return nearestStation
         }
-        
+
         if (!haveTile && tileClaimed) {
             return tileClaimed
         }
-        
+
         if (haveTile && holeClaimed) {
             return holeClaimed
         }
-        
+
         return null
     }
 
@@ -157,7 +156,7 @@ class Robot implements GridTrait {
     private void moveByDirection(int dx, int dy) {
         if (energy <= 0 || (dx == 0 && dy == 0)) return
 
-        def x = location.x
+            def x = location.x
         def y = location.y
 
         if (dx == 0) {
@@ -189,10 +188,9 @@ class Robot implements GridTrait {
         def nextY = y + dy
         if (isBlockedMove(nextX, nextY)) return
 
-        def nextLoc = new GridPoint(nextX, nextY)
+            def nextLoc = new GridPoint(nextX, nextY)
         changeLocPlaceTo(nextLoc)
 
-        pathList << nextLoc
         --energy
         ++stepFromLastHole
     }
@@ -233,7 +231,7 @@ class Robot implements GridTrait {
     private def <T extends GridTrait> T getClosestObject(List<T> objects) {
         objects.min { calcPath(it) }
     }
-    
+
     private Hole getBestHole(List<Hole> filteredHoles) {
         switch (holeStrategy) {
             case HoleStrategy.NEAREST:
