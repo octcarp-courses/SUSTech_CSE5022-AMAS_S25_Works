@@ -1,20 +1,24 @@
 package tileworld.data
 
-import au.com.bytecode.opencsv.CSVWriter
 import groovy.transform.CompileStatic
-import tileworld.agent.Robot
-import tileworld.utils.GridUtils
-import tileworld.utils.ParameterUtils
+
+import au.com.bytecode.opencsv.CSVWriter
+
 import repast.simphony.data2.AggregateDataSource
 import repast.simphony.data2.DataSet
 import repast.simphony.engine.environment.RunEnvironment
 import repast.simphony.engine.schedule.ScheduledMethod
 
+import tileworld.agent.Robot
+import tileworld.utils.GridUtils
+import tileworld.utils.ParameterUtils
+
+
 @CompileStatic
 class DataHandler {
     private static DataHandler instance = null
     
-    private final String FILE_DIR = './result/temp/'
+    private final String FILE_DIR = './result/temp_csv/'
     
     private int times = 0
     
@@ -43,9 +47,9 @@ class DataHandler {
         if (!dir.exists()) {
             dir.mkdirs()
             println "Creat Directory: ${dir.absolutePath}"
-        } else {
-            println "Directory existed: ${dir.absolutePath}"
         }
+        
+        println "Result .csv output Directory existed: ${dir.absolutePath}"
     }
     
     private void initFileName() {

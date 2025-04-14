@@ -65,7 +65,7 @@ Finally, I will base this simulation on *[Repast Simphony](https://repast.github
 
 #### File Structure
 
-```
+```text
 └─tileworld
     ├─agent
     │      Robot.groovy # Robot Agent 
@@ -120,11 +120,11 @@ trait GridTrait {
     void place() {
         grid.moveTo(this, location.x, location.y)
     }
-    
+
     int calcPath(GridPoint other) {
         Math.abs(location.x - other.x) + Math.abs(location.y - other.y)
     }
-    
+
     // ...
 }
 ```
@@ -136,27 +136,15 @@ These contents are the basis for building these classes.
 Then I add different attributes to them relatively, so they can have their own functions.
 
 - `Tile`
-    - `claimed` : whether it has been claimed.
+  - `claimed` : whether it has been claimed.
 - `Hole`
-    - `claimed ` : whether it has been claimed.
+  - `claimed` : whether it has been claimed.
 - `Obstacle`
-    - none
+  - none
 - `EnergyStation`
-    - none
+  - none
 
-- Then I add different attributes to them relatively, so they can have their own functions.
-
-    - `Tile`
-        - `claimed` : whether it has been claimed.
-    - `Hole`
-        - `claimed ` : whether it has been claimed.
-    - `Obstacle`
-        - none
-    - `EnergyStation`
-        - none
-
-    `Robot` have more attributes
-
+- `Robot` have more attributes
     - `id` : A unique identifier for each robot instance.
     - `energy` : The robot's energy level.
     - `scoreEarned` : Record the score the robot has accumulated.
@@ -167,6 +155,7 @@ Then I add different attributes to them relatively, so they can have their own f
     - `tileClaimed` : The tile the robot has claimed.
     - `holeClaimed` : The hole the robot has claimed.
     - `nearestStation` : Points to the nearest energy station. The robot will attempt to move towards it when its energy is low.
+
 
 ### BDI Paradigm
 
@@ -198,13 +187,6 @@ These desires decides it intentions next.
 - **Deposit Tile into Hole**: If the agent has a tile and at least one hole is unclaimed, the agent will claim best one, move towards it and put the tile.
 - **Move to Random Location**: Random move.
 
-#### Intentions (Priority from high to low)
-
-- **Recharge at Energy Station**: If the agent's energy is below a the threshold, it will first move towards the nearest energy station to recharge.
-- **Pick a Tile**: If the agent is not carrying a tile, the agent will claim nearest one, move towards it and pick it up.
-- **Deposit Tile into Hole**: If the agent has a tile and a hole is claimed, the agent will claim best one, move towards it and put the tile there.
-- **Move to Random Location**: Random move.
-
 ### Hole Filling Strategy
 
 #### `HIGHTEST`
@@ -218,16 +200,18 @@ Directly search for the nearest hole to fill.
 #### `A_STAR`
 
 Use A* algorithm
+
 $$
 f (x) = g(x) + h(x)
 $$
+
 Where $g(x)$ is the distance traveled since the last hole filling, and $h(x)$ is the estimated straight-line distance of the current object $x$.
 
 In this way, the existing distance and past costs will be combined to make a local optimal strategy.
 
 ### Pathfinding Strategy
 
-My robot calculates the direction to move by comparing its current position to the target's position. 
+My robot calculates the direction to move by comparing its current position to the target's position.
 
 First, the algorithm will calculate the direction to target location horizontally and vertically, which is `dx` and `dy` . $x_d, y_d \in \{-1, 0, 1\}$
 
@@ -287,15 +271,15 @@ In the test, Robot strategy vs. id
 
 #### Score
 
-**Seed 0**
+##### Seed 0
 
 ![score_seed_0](img/result/score_seed_0.png)
 
-**Seed 42**
+##### Seed 42
 
 ![score_seed_42](img/result/score_seed_42.png)
 
-**Seed 12345**
+##### Seed 12345
 
 ![score_seed_12345](img/result/score_seed_12345.png)
 
@@ -307,7 +291,7 @@ But it is worth noting that in my design, there is no strong competition between
 
 #### Energy
 
-**Seed 12345**
+##### Seed 12345
 
 ![energy_seed_12345](img/result/energy_seed_12345.png)
 
@@ -335,6 +319,6 @@ Changing simulation configuration in GUI is inconvenient, unclear, and generates
 
 In JVM language development, I prefer [*IntelliJ IDEA*](https://www.jetbrains.com/idea/) for medium or large projects, and [*Visual Studio Code*](https://code.visualstudio.com/) for lightweight projects.
 
-How ever, *Repast Simphony* based on [*Eclipse*](https://www.eclipse.org/) , and add many personalized modules and functions, which means it's very hard to migrate to another IDE or editor. 
+How ever, *Repast Simphony* based on [*Eclipse*](https://www.eclipse.org/) , and add many personalized modules and functions, which means it's very hard to migrate to another IDE or editor.
 
 So I learn to use Eclipse plugins and configurations to improve it to a development environment that I was used to.

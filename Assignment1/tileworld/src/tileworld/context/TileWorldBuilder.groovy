@@ -35,6 +35,7 @@ class TileWorldBuilder implements ContextBuilder {
     private final List<Robot> robots = []
 
     private RunListener listener = null
+    
     @Override
     Context build(Context context) {
         this.context = context

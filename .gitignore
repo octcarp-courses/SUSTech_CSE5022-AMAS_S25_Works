@@ -36,4 +36,4 @@ bin/
 *.zip
 
 ## tmeporary files ##
-/temp/
+temp/

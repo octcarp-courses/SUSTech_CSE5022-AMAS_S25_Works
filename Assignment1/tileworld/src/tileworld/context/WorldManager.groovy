@@ -23,7 +23,7 @@ import tileworld.environment.Tile
 
 @CompileStatic
 class WorldManager {
-    private static WorldManager instance = null;
+    private static WorldManager instance = null
 
     private final Grid grid
     private final Context context
