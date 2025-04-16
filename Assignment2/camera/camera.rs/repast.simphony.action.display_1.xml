@@ -4,7 +4,7 @@
   <styles>
     <entry>
       <string>camera.agent.Camera</string>
-      <string>repast.simphony.visualizationOGL2D.DefaultStyleOGL2D</string>
+      <string>camera.style.CameraStyle</string>
     </entry>
     <entry>
       <string>camera.environment.TargetObject</string>
@@ -41,7 +41,7 @@
     <pType>LAST</pType>
     <duration>-1.0</duration>
     <frequency>REPEAT</frequency>
-    <hashCode>-1250105886</hashCode>
+    <hashCode>1118809784</hashCode>
   </schedParams>
   <layoutClassName>foo.bar.baz</layoutClassName>
   <layoutProjection>space</layoutProjection>

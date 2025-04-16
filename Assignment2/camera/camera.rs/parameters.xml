@@ -5,6 +5,42 @@
 						isReadOnly="false" 
 						converter="repast.simphony.parameter.StringConverterFactory$IntConverter"
 											/>
+				<parameter name="SPACE_Y_SIZE" displayName="Spcae Y size" type="double" 
+						defaultValue="50.0" 
+						isReadOnly="false" 
+						converter="repast.simphony.parameter.StringConverterFactory$DoubleConverter"
+												values="50.0 "
+											/>
+				<parameter name="NUM_CAMERAS" displayName="Number of cameras" type="int" 
+						defaultValue="5" 
+						isReadOnly="false" 
+						converter="repast.simphony.parameter.StringConverterFactory$IntConverter"
+												values="5 "
+											/>
+				<parameter name="NUM_TARGET_OBJS" displayName="Number of target objects" type="int" 
+						defaultValue="10" 
+						isReadOnly="false" 
+						converter="repast.simphony.parameter.StringConverterFactory$IntConverter"
+												values="10 "
+											/>
+				<parameter name="CAMERA_RADIUS" displayName="Camera radius" type="double" 
+						defaultValue="10.0" 
+						isReadOnly="false" 
+						converter="repast.simphony.parameter.StringConverterFactory$DoubleConverter"
+												values="10.0 "
+											/>
+				<parameter name="CAMERA_ANGLE" displayName="Camera angle of view" type="double" 
+						defaultValue="90.0" 
+						isReadOnly="false" 
+						converter="repast.simphony.parameter.StringConverterFactory$DoubleConverter"
+												values="90.0 "
+											/>
+				<parameter name="SPACE_X_SIZE" displayName="Spcae X size" type="double" 
+						defaultValue="50.0" 
+						isReadOnly="false" 
+						converter="repast.simphony.parameter.StringConverterFactory$DoubleConverter"
+												values="50.0 "
+											/>
 		</parameters>
 
 

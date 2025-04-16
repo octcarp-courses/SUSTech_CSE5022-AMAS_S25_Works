@@ -1,7 +1,9 @@
 package camera.agent
 
+import camera.common.SpaceTrait
+import camera.context.WorldManager
 import camera.environment.TargetObject
-
+import camera.utils.ParameterUtils
 import groovy.transform.CompileStatic
 
 import repast.simphony.engine.schedule.ScheduledMethod
@@ -27,13 +29,16 @@ import repast.simphony.space.continuous.ContinuousSpace
  * Optimization (ACO).
  */
 @CompileStatic
-class Camera {
-    ContinuousSpace<Object> space
-    int id
-    // managed target objects
-    List<TargetObject> ownedObjs = []
+class Camera implements SpaceTrait {
+    private final double CAMERA_RADIUS = ParameterUtils.instance.CAMERA_RADIUS
+    private final double CAMERA_ANGLE = ParameterUtils.instance.CAMERA_ANGLE
 
-    Camera(ContinuousSpace<Object> space, int id) {
+    // managed target objects
+    private List<TargetObject> ownedTarObjs = []
+
+    double utility = 0.0
+
+    Camera(ContinuousSpace space, int id) {
         this.space = space
         this.id = id
     }
@@ -42,10 +47,10 @@ class Camera {
      * The main execution loop of the camera.
      */
     @ScheduledMethod(start = 1d, interval = 1d)
-    def step() {
+    void step() {
         // update owned objects - hand over if necessary
         List<TargetObject> stillOwned = []
-        ownedObjs.each { obj ->
+        ownedTarObjs.each { obj ->
             if (shouldHandOver(obj)) {
                 handover(obj)
             } else {
@@ -53,7 +58,7 @@ class Camera {
                 stillOwned << obj
             }
         }
-        ownedObjs = stillOwned
+        ownedTarObjs = stillOwned
         // track owned objects
         trackObjects()
     }
@@ -61,23 +66,55 @@ class Camera {
     // simulate the behavior of object tracking
     private void trackObjects() {
         // TODO: with limited resources, sometimes I can only track some objects
+
         // TODO: also define some logic so we can collect the performance of object
         // tracking (how long an object is tracked/missed)
     }
 
     // check whether the camera should initiate a handover
-    private boolean shouldHandOver(TargetObject obj) {
-        // TODO
-        return false
+    private boolean shouldHandOver(TargetObject tarObj) {
+        return !isInFOV(tarObj)
     }
 
     // initiate handover
-    private void handover(TargetObject obj) {
-        // TODO: advertise owned objects to other cameras
-        // TODO: receive bids (i.e., utility) from other cameras
-        // TODO: decide the winner and finalize transfer of object
-        // TODO: update the current utility of the buyer & seller cameras
-        // TODO: update vision graph
+    private void handover(TargetObject tarObj) {
+        // advertise owned objects to other cameras
+        def world = WorldManager.instance
+        def graph = world.visionGraph
+        def neighbors = graph.getNeighbors(this.id)
+
+        Map<Camera, Double> bids = [:]
+
+        // receive bids (i.e., utility) from other cameras
+        world.cameras.each { cam ->
+            if (cam.id != this.id && neighbors.contains(cam.id)) {
+                double bid = cam.getObjUtility(tarObj)
+                if (bid > 0.0) {
+                    bids[cam] = bid
+                }
+            }
+        }
+
+        if (bids.isEmpty()) return
+
+            def sortedBids = bids.sort { -it.value }
+        Camera winner = sortedBids.keySet().first()
+        double highest = sortedBids[winner]
+        double secondHighest = 0.0
+        if (sortedBids.size() > 1) {
+            secondHighest = sortedBids.values()[1]
+        }
+
+        // decide the winner and finalize transfer of object
+        this.ownedTarObjs.remove(tarObj)
+        winner.ownedTarObjs << tarObj
+
+        // update the current utility of the buyer & seller cameras
+        this.utility += secondHighest
+        winner.utility -= secondHighest
+
+        // update vision graph
+        graph.reinforce(this.id, winner.id)
     }
 
     /**
@@ -88,9 +125,10 @@ class Camera {
      * @param obj the object to be tracked
      * @return one single double value representing the utility
      */
-    def getObjUtility(TargetObject obj) {
-        // TODO
-        return -1
+    double getObjUtility(TargetObject tarObj) {
+        def clarity = estimateClarity(tarObj)
+        def visibility = estimateVisibility(tarObj)
+        return clarity * visibility
     }
 
     /**
@@ -100,13 +138,35 @@ class Camera {
      * 
      * @return one single double value representing the utility
      */
-    def getUtility() {
-        // TODO
-        return -1
+    double getUtility() {
+        double totalUtility = 0.0
+        ownedTarObjs.each { tarObj ->
+            totalUtility += getObjUtility(tarObj)
+        }
+        return totalUtility
     }
 
-    int getId() {
-        return id
+    private double estimateClarity(TargetObject tarObj) {
+        double distance = calcDxDyDistanceWithOther(tarObj)[2]
+
+        return 1.0 - (distance / CAMERA_RADIUS);
+    }
+
+    private double estimateVisibility(TargetObject tarObj) {
+        return isInFOV(tarObj) ? 1.0 : 0.0
+    }
+
+    private boolean isInFOV(TargetObject tarObj) {
+        def res = calcDxDyDistanceWithOther(tarObj)
+
+        double dx = res[0]
+        double dy = res[1]
+        double distance = res[2]
+
+        if (distance > CAMERA_RADIUS) return false
+
+        double angle = Math.toDegrees(Math.atan2(dy, dx))
+        return Math.abs(angle) <= CAMERA_ANGLE / 2
     }
 }
 
