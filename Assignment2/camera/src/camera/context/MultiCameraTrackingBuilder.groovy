@@ -12,7 +12,7 @@ import repast.simphony.space.continuous.ContinuousSpace
 import repast.simphony.space.continuous.RandomCartesianAdder
 import repast.simphony.space.continuous.WrapAroundBorders
 import repast.simphony.space.grid.Grid
-
+import camera.data.DataHandler
 import camera.utils.ParameterUtils
 
 @CompileStatic
@@ -26,6 +26,9 @@ class MultiCameraTrackingBuilder implements ContextBuilder {
 
     private double SPACE_X_SIZE
     private double SPACE_Y_SIZE
+    private int SCENARIO_ID
+
+    private CameraScenario scenario
 
     private WorldManager worldManager
 
@@ -42,12 +45,14 @@ class MultiCameraTrackingBuilder implements ContextBuilder {
         // configure run environment
         configRunEnv()
 
+        scenario = CameraScenario.scenarios[SCENARIO_ID]
+
         // create continuous 2D space projection (randomize initialize location for new
         // objects - then manually move cameras into positions)
         def spaceFactory = ContinuousSpaceFactoryFinder.createContinuousSpaceFactory(null)
         space = spaceFactory.createContinuousSpace(SPACE_NAME, context,
                 new RandomCartesianAdder(), new WrapAroundBorders(),
-                SPACE_X_SIZE, SPACE_Y_SIZE)
+                scenario.worldX, scenario.worldY)
 
         // create tracking network as a projection for visualization
         // when a camera is actually tracking a target object, an edge will be formed
@@ -64,13 +69,12 @@ class MultiCameraTrackingBuilder implements ContextBuilder {
 
         params.refresh()
 
-        SPACE_X_SIZE = params.SPACE_X_SIZE
-        SPACE_Y_SIZE = params.SPACE_Y_SIZE
+        SCENARIO_ID = params.SCENARIO_ID
     }
 
     private void addElements() {
         // create world controller for environment initialization and updating
-        WorldManager.initInstance(context, space)
+        WorldManager.initInstance(context, space, scenario)
 
         worldManager = WorldManager.instance
         worldManager.initWorld()
@@ -79,12 +83,15 @@ class MultiCameraTrackingBuilder implements ContextBuilder {
     }
 
     private void configRunEnv() {
+        RunEnvironment.instance.endAt(1000.0)
+
         if (!listener) {
             listener =new RunListener() {
                         @Override
                         void stopped() {
                             println "Simulation stopped, collecting data..."
-                            // TODO: Collect data from cameras
+                            DataHandler.instance.dealTrackCountData(WorldManager.instance.trackedCount)
+                            DataHandler.instance.dealVisionGraph(WorldManager.instance.graphSnapshots)
                         }
 
                         @Override

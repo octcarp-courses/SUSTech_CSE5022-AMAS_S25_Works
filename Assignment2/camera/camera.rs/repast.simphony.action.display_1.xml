@@ -3,21 +3,21 @@
   <type>2D</type>
   <styles>
     <entry>
-      <string>camera.agent.Camera</string>
-      <string>camera.style.CameraStyle</string>
+      <string>camera.environment.Target</string>
+      <string>repast.simphony.visualization.editedStyle.EditedStyle2D</string>
     </entry>
     <entry>
-      <string>camera.environment.TargetObject</string>
-      <string>repast.simphony.visualizationOGL2D.DefaultStyleOGL2D</string>
+      <string>camera.agent.Camera</string>
+      <string>camera.style.CameraStyle</string>
     </entry>
   </styles>
   <editedStyles>
     <entry>
-      <string>camera.agent.Camera</string>
-      <null/>
+      <string>camera.environment.Target</string>
+      <string>camera.environment.Target.style_0.xml</string>
     </entry>
     <entry>
-      <string>camera.environment.TargetObject</string>
+      <string>camera.agent.Camera</string>
       <null/>
     </entry>
   </editedStyles>
@@ -41,19 +41,19 @@
     <pType>LAST</pType>
     <duration>-1.0</duration>
     <frequency>REPEAT</frequency>
-    <hashCode>1118809784</hashCode>
+    <hashCode>899226735</hashCode>
   </schedParams>
   <layoutClassName>foo.bar.baz</layoutClassName>
   <layoutProjection>space</layoutProjection>
   <layoutInterval>0</layoutInterval>
   <layerOrder>
     <entry>
-      <string>camera.agent.Camera</string>
-      <int>1</int>
+      <string>camera.environment.Target</string>
+      <int>0</int>
     </entry>
     <entry>
-      <string>camera.environment.TargetObject</string>
-      <int>0</int>
+      <string>camera.agent.Camera</string>
+      <int>1</int>
     </entry>
   </layerOrder>
   <projections>

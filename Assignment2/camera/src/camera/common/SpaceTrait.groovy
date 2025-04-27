@@ -12,6 +12,11 @@ trait SpaceTrait {
     ContinuousSpace space
     int id
 
+    boolean moveTo(double x, double y) {
+        space.moveTo(this, x, y)
+    }
+
+    // Calculate (x difference, y difference, distance) with others (for FOV calculation)
     double[] calcDxDyDistanceWithOther(SpaceTrait other) {
         NdPoint thisLoc = space.getLocation(this)
         NdPoint otherLoc = space.getLocation(other)

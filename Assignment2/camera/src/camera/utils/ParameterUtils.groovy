@@ -25,15 +25,27 @@ class ParameterUtils {
     }
 
     private final Parameters parameters = RunEnvironment.instance.parameters
+    
+    final int SYSTEM_RANDOM_SEED = getInt("randomSeed", -1)
+    
+    final int SCENARIO_ID = getInt("SCENARIO_ID", 0)
 
-    final double SPACE_X_SIZE = getDouble("SPACE_X_SIZE", 50)
-    final double SPACE_Y_SIZE = getDouble("SPACE_Y_SIZE", 50)
+    final double CAMERA_RADIUS = getDouble("CAMERA_RADIUS", 15.0)
+    final double CAMERA_ANGLE = getDouble("CAMERA_ANGLE", 120.0)
+    final int CAMERA_MAX_TRACK = getInt("CAMERA_MAX_TRACK", 5)
 
-    final int NUM_CAMERAS = getInt("NUM_CAMERAS", 5)
-    final int NUM_TARGET_OBJS = getInt("NUM_TARGET_OBJS", 10)
+    // Number of target objects in the simulation
+    final int NUM_TARGETS = getInt("NUM_TARGETS", 10)
 
-    final double CAMERA_RADIUS = getDouble("CAMERA_RADIUS", 10)
-    final double CAMERA_ANGLE = getDouble("CAMERA_ANGLE", 90)
+    // Pheromone Rho, evaporation rate
+    final double PHEROMONE_RHO = getDouble("PHEROMONE_RHO", 0.1)
+    // Pheromone Delta, trade increases
+    final double PHEROMONE_DELTA = getDouble("PHEROMONE_DELTA", 1.0)
+
+    // Probability Epsilon, for weak threshold
+    final double PROBABILITY_EPS = getDouble("PROBABILITY_EPS", 0.1)
+    // probability Eta, used to notify weak neighbors in the simulation
+    final double PROBABILITY_ETA = getDouble("PROBABILITY_ETA", 0.1)
 
     int getInt(String paramName, int defaultValue = 0) {
         try {

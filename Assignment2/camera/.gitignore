@@ -7,3 +7,5 @@ model_description.txt
 
 /docs/index.html
 /camera.rs/parameters_backup.xml
+/camera.rs/launch.props
+/debug.log.1

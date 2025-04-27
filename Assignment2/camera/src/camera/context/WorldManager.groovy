@@ -7,8 +7,8 @@ import repast.simphony.engine.schedule.ScheduledMethod
 import repast.simphony.space.continuous.ContinuousSpace
 
 import camera.agent.Camera
-import camera.environment.TargetObject
-import camera.environment.VisionGraph
+import camera.environment.Target
+import camera.graph.PheGraph
 import camera.utils.ParameterUtils
 import camera.context.WorldManager
 
@@ -22,8 +22,8 @@ class WorldManager {
 
     private static WorldManager instance = null
 
-    static synchronized void initInstance(Context context, ContinuousSpace space) {
-        instance = new WorldManager(context, space)
+    static synchronized void initInstance(Context context, ContinuousSpace space, CameraScenario scenario) {
+        instance = new WorldManager(context, space, scenario)
     }
 
     static WorldManager getInstance() {
@@ -33,26 +33,29 @@ class WorldManager {
         instance
     }
 
+    final List<Integer> trackedCount = []
+    final List<Map<Integer, Map<Integer, Double>>> graphSnapshots = []
+
     // context
     private final Context context
     // world
     private final ContinuousSpace space
 
-    private final int NUM_CAMERAS = ParameterUtils.instance.NUM_CAMERAS
-    private final int NUM_TARGET_OBJS = ParameterUtils.instance.NUM_TARGET_OBJS
+    private final int NUM_TARGET_OBJS = ParameterUtils.instance.NUM_TARGETS
 
-    private int globalId = 0
-
+    final PheGraph visionGraph
     // cameras
-    private final List<Camera> cameras = []
+    private final Map<Integer, Camera> cameras = [:]
     // target objects
-    private final List<TargetObject> targetObjects = []
+    private final Map<Integer, Target> targets = [:]
 
-    private final VisionGraph visionGraph = new VisionGraph()
+    private final CameraScenario scenario
 
-    private WorldManager(Context context, ContinuousSpace space) {
+    private WorldManager(Context context, ContinuousSpace space, CameraScenario scenario) {
         this.context = context
         this.space = space
+        this.scenario = scenario
+        visionGraph = new PheGraph(scenario.cameraParams.size())
     }
 
     /***
@@ -61,27 +64,55 @@ class WorldManager {
      * @param context Repast Simphony's current simulation context
      */
     void initWorld() {
-        globalId = 0
-
-        NUM_CAMERAS.times {
-            def camera = new Camera(space, ++globalId)
-            cameras << camera
+        int cameraId = 0
+        scenario.cameraParams.each { param ->
+            int id = ++cameraId
+            def camera = new Camera(context, space, id, param.rotation)
+            cameras[cameraId] = camera
             context << camera
+            camera.moveTo(param.x, param.y)
         }
 
-        NUM_TARGET_OBJS.times {
-            def targetObject = new TargetObject(space, ++globalId)
-            targetObjects << targetObject
-            context << targetObject
+        (1..NUM_TARGET_OBJS).each { id ->
+            def target = new Target(space, id)
+            targets[id] = target
+            context << target
         }
+    }
+
+    int tick = 0
+    @ScheduledMethod(start = 2d, interval = 1d)
+    void step() {
+        if (tick % 300 == 0) {
+            graphSnapshots << visionGraph.graphSnapshot()
+        }
+        trackedCount << (targets.values().count { it.isTracked } as int)
+        handlePheromone()
+        ++tick
     }
 
     /***
      * Handles pheromone levels of edges in the vision graph.
      */
-    @ScheduledMethod(start = 1d, interval = 1d)
     void handlePheromone() {
         // evaporate pheromone
-        visionGraph.evaporate()
+        visionGraph.evaporateLastStep()
+        visionGraph.initThisStep()
+    }
+
+    Camera getCameraById(int id) {
+        def camera = cameras[id]
+        if (!camera) {
+            System.err.println "Camera $id not found."
+        }
+        camera
+    }
+
+    Target getTargetById(int id) {
+        def target = targets[id]
+        if (!target) {
+            System.err.println "Target object $id not found."
+        }
+        target
     }
 }

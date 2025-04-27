@@ -2,12 +2,19 @@ package camera.agent
 
 import camera.common.SpaceTrait
 import camera.context.WorldManager
-import camera.environment.TargetObject
+import camera.environment.Target
+import camera.graph.PheGraph
 import camera.utils.ParameterUtils
+import camera.common.BidRec
+import camera.agent.CameraParam
+
 import groovy.transform.CompileStatic
 
+import repast.simphony.random.RandomHelper
+import repast.simphony.context.Context
 import repast.simphony.engine.schedule.ScheduledMethod
 import repast.simphony.space.continuous.ContinuousSpace
+import repast.simphony.space.continuous.NdPoint
 
 /**
  * A camera takes responsibility of tracking one or more target objects in the
@@ -28,19 +35,43 @@ import repast.simphony.space.continuous.ContinuousSpace
  * graph can be dynamically updated using an approach similar to Ant Colony
  * Optimization (ACO).
  */
+
 @CompileStatic
 class Camera implements SpaceTrait {
-    private final double CAMERA_RADIUS = ParameterUtils.instance.CAMERA_RADIUS
-    private final double CAMERA_ANGLE = ParameterUtils.instance.CAMERA_ANGLE
+    private final Context context
+
+    private final double RADIUS
+    private final double ANGLE
+    private final double ROTATION
+    private final int MAX_TRACK = ParameterUtils.instance.CAMERA_MAX_TRACK
+
+    private final WorldManager world = WorldManager.instance
+    private final PheGraph graph = world.visionGraph
+
+    private double payment = 0.0
+    private double pReceive = 0.0
+    private double utility = 0.0
+
 
     // managed target objects
-    private List<TargetObject> ownedTarObjs = []
+    private List<Target> ownedTargets = []
 
-    double utility = 0.0
+    private Map<Target, List<BidRec>> recivedBid = [:]
+    private Map<Target, Double> ownedUtilities = [:]
 
-    Camera(ContinuousSpace space, int id) {
+    private int curStep = 0
+
+    Camera(Context context, ContinuousSpace space, int id, double rotation) {
+        this(context, space, id, rotation, ParameterUtils.instance.CAMERA_RADIUS, ParameterUtils.instance.CAMERA_ANGLE)
+    }
+
+    Camera(Context context, ContinuousSpace space, int id, double rotation, double radius, double angle) {
+        this.context = context
         this.space = space
         this.id = id
+        this.RADIUS = radius
+        this.ANGLE = angle
+        this.ROTATION = rotation
     }
 
     /**
@@ -48,73 +79,216 @@ class Camera implements SpaceTrait {
      */
     @ScheduledMethod(start = 1d, interval = 1d)
     void step() {
+        ++curStep
+        updateInfo()
         // update owned objects - hand over if necessary
-        List<TargetObject> stillOwned = []
-        ownedTarObjs.each { obj ->
-            if (shouldHandOver(obj)) {
-                handover(obj)
+        List<Target> stillOwned = []
+        List<Target> needHandover = []
+        ownedTargets.each { target ->
+            if (shouldHandOver(target)) {
+                boolean handRes = handOver(target)
+                target.loseTrackBy(id)
             } else {
-                // no need to hand over - it will still be tracked by me if possible
-                stillOwned << obj
+                stillOwned << target
             }
         }
-        ownedTarObjs = stillOwned
+        ownedTargets = stillOwned
+        //		needHandover.each { target ->
+        //			handover(target)
+        //		}
         // track owned objects
         trackObjects()
     }
 
-    // simulate the behavior of object tracking
-    private void trackObjects() {
-        // TODO: with limited resources, sometimes I can only track some objects
+    private void updateInfo() {
+        double totalUtility = 0.0
+        payment = 0.0
+        pReceive = 0.0
+        ownedUtilities.clear()
+        ownedTargets.each { target ->
+            double utility = getTargetUtility(target)
+            ownedUtilities[target] = utility
+            totalUtility += utility
+        }
+        ownedUtilities.sort { a, b -> a.value <=> b.value }
+    }
 
-        // TODO: also define some logic so we can collect the performance of object
-        // tracking (how long an object is tracked/missed)
+    /**
+     * Simulate the behavior of object tracking
+     */
+    private void trackObjects() {
+        // with limited resources, sometimes I can only track some objects
+        int spare = MAX_TRACK - ownedTargets.size()
+
+        // if no spare
+        if (spare == 0) return
+
+            int newCount = 0
+        // Get targets
+        def newTargets = getAvailableTargets()
+        // Sort by there utility
+        newTargets.sort{ -getTargetUtility(it) }
+
+        // While loop
+        int newTargetI = 0
+        while(spare > newCount && newTargetI < newTargets.size()) {
+            // Get the target
+            def target = newTargets[newTargetI]
+            // Double check not tracked by other camera
+            if (!target.isTracked) {
+                // Track it
+                target.trackByCamera(id)
+                // Add target to owned
+                ownedTargets << target
+                ++newCount
+            }
+            ++newTargetI
+        }
     }
 
     // check whether the camera should initiate a handover
-    private boolean shouldHandOver(TargetObject tarObj) {
-        return !isInFOV(tarObj)
+    private boolean shouldHandOver(Target target) {
+        return (ownedUtilities[target] <=0.0)
     }
 
-    // initiate handover
-    private void handover(TargetObject tarObj) {
+    /**
+     * Hand over method using Vickrey Auction
+     * 
+     * @param target target need to hand over
+     * @return Boolean value, whether hand over success
+     */
+    private boolean handOver(Target target) {
+        recivedBid[target] = []
+        int targetId = target.id
+
         // advertise owned objects to other cameras
-        def world = WorldManager.instance
-        def graph = world.visionGraph
-        def neighbors = graph.getNeighbors(this.id)
+        // Get probabilities from vision graph
+        def neiProbabilities = graph.getNotifyProbabilities(id)
 
-        Map<Camera, Double> bids = [:]
-
-        // receive bids (i.e., utility) from other cameras
-        world.cameras.each { cam ->
-            if (cam.id != this.id && neighbors.contains(cam.id)) {
-                double bid = cam.getObjUtility(tarObj)
-                if (bid > 0.0) {
-                    bids[cam] = bid
-                }
+        // For each neighbor
+        neiProbabilities.each { camId, probability ->
+            if (probability >= 1 || RandomHelper.nextDouble() > probability) {
+                // Send the neighbor, call its receive method for simulation
+                sendTo(camId).receiveAuction(this.id, targetId)
             }
         }
 
-        if (bids.isEmpty()) return
+        // receive bids (i.e., utility) from other cameras
+        def bids = recivedBid[target]
 
-            def sortedBids = bids.sort { -it.value }
-        Camera winner = sortedBids.keySet().first()
-        double highest = sortedBids[winner]
-        double secondHighest = 0.0
-        if (sortedBids.size() > 1) {
-            secondHighest = sortedBids.values()[1]
+        // No response
+        if (bids.isEmpty()) {
+            return false
+        }
+
+        // Sort the bid
+        def sortedBids = bids.sort { -it.bid }
+
+        // Decide the winner
+        def winnerBid = sortedBids.first()
+
+        // Decide the final bid
+        double finalBid = 0.0
+        // Have second bidder
+        if (sortedBids.size() >= 2) {
+            finalBid = sortedBids[1].bid
         }
 
         // decide the winner and finalize transfer of object
-        this.ownedTarObjs.remove(tarObj)
-        winner.ownedTarObjs << tarObj
-
         // update the current utility of the buyer & seller cameras
-        this.utility += secondHighest
-        winner.utility -= secondHighest
+        double thisUtility = ownedUtilities[target]
+        // Can't hand over for utility is not enough
+        if (thisUtility > 0 && finalBid <= thisUtility) {
+            return false
+        }
 
-        // update vision graph
-        graph.reinforce(this.id, winner.id)
+        // Get winner ID
+        def winnerId = winnerBid.bidderId
+
+        // Auctioneer sent
+        sendTransferedTarget(target, finalBid)
+        // Winner receive
+        sendTo(winnerId).receiveTransferedTarget(target, finalBid)
+
+        // update vision graph for success trade
+        graph.reinforce(this.id, winnerId)
+
+        return true
+    }
+
+    /**     
+     * Calculates own bid for specific target from .
+     * 
+     * @param auctioneer Auctioneer who send the request
+     * @param target The target object
+     */
+    void receiveAuction(int auctioneerId, int targetId) {
+        // Get the utility
+        double bid = getTargetUtility(world.getTargetById(targetId))
+        // Judge if can handle the new one
+        if (ownedTargets.size() < MAX_TRACK && bid > 0) {
+            // Create record
+            def bidRec = new BidRec(id, auctioneerId, targetId, bid)
+            // Send record
+            sendTo(auctioneerId).receiveBid(bidRec)
+        }
+    }
+
+    /**
+     * Receives and processes a bid record.
+     * 
+     * @param bidRec The bid record containing auctioneer ID, bid amount, and target ID.
+     */
+    void receiveBid(BidRec bidRec) {
+        // Wrong
+        if (bidRec.auctioneerId != this.id) return
+            // Invalid
+            if (bidRec.bid <= 0) return
+
+            // Have target
+            def target = recivedBid.keySet().find { it.id == bidRec.targetId }
+        // Collect bid record
+        if (target) {
+            recivedBid[target] << bidRec
+        }
+    }
+
+    /**
+     * Winner bidder receive the target object
+     * 
+     * @param target Received target
+     * @param bid final bid
+     */
+    void receiveTransferedTarget(Target target, double bid) {
+        // Add to owned
+        ownedTargets << target
+        // Track the camera
+        target.trackByCamera(id)
+        // Payment increase
+        payment += bid
+    }
+
+    /**
+     * Auctioneer send the target object
+     * 
+     * @param target Sent target
+     * @param bid Auctioneer
+     */
+    private void sendTransferedTarget(Target target, double bid) {
+        // Lose the target track
+        target.loseTrackBy(id)
+        // Received payment increase
+        pReceive += bid
+    }
+
+    /**
+     * For simulate communication
+     *
+     * @param cameraId send to camera's id
+     * @return the camera object reference
+     */
+    private Camera sendTo(int cameraId) {
+        world.getCameraById(cameraId)
     }
 
     /**
@@ -122,13 +296,30 @@ class Camera implements SpaceTrait {
      * 
      * NOTE: This is for calculating the bid for a specific object.
      * 
-     * @param obj the object to be tracked
+     * @param target the object to be tracked
      * @return one single double value representing the utility
      */
-    double getObjUtility(TargetObject tarObj) {
-        def clarity = estimateClarity(tarObj)
-        def visibility = estimateVisibility(tarObj)
-        return clarity * visibility
+    double getTargetUtility(Target target) {
+        // Similar steps like FOV calculation
+        def res = calcDxDyDistanceWithOther(target)
+        double dx = -res[0]
+        double dy = -res[1]
+        double distance = res[2]
+        double angle = Math.toDegrees(Math.atan2(dy, dx))
+        double relativeAngle = ROTATION - angle
+
+        // Calculate angle factor
+        double factor = Math.abs(relativeAngle) / (ANGLE / 2)
+        double angleVis = 1 / (1 + factor) - 0.5
+        // Calculate radius factor
+        double radiusVis = 1.0 - (distance / RADIUS)
+        // Get v
+        double visibility = angleVis * radiusVis
+
+        // Calculate confidence
+        double confidence = isInFOV(target) ? 1.0 : 0.0
+
+        return confidence * visibility
     }
 
     /**
@@ -140,33 +331,56 @@ class Camera implements SpaceTrait {
      */
     double getUtility() {
         double totalUtility = 0.0
-        ownedTarObjs.each { tarObj ->
-            totalUtility += getObjUtility(tarObj)
+        ownedTargets.each { target ->
+            totalUtility += getTargetUtility(target)
         }
         return totalUtility
     }
 
-    private double estimateClarity(TargetObject tarObj) {
-        double distance = calcDxDyDistanceWithOther(tarObj)[2]
+    /**
+     * Judge whether the target is in this camera FOV.
+     * 
+     * @param target Input target object
+     * @return boolean value whether the target is in FOV
+     */
+    private boolean isInFOV(Target target) {
+        // Get (x difference, y difference, distance) from other util methods
+        def res = calcDxDyDistanceWithOther(target)
 
-        return 1.0 - (distance / CAMERA_RADIUS);
-    }
-
-    private double estimateVisibility(TargetObject tarObj) {
-        return isInFOV(tarObj) ? 1.0 : 0.0
-    }
-
-    private boolean isInFOV(TargetObject tarObj) {
-        def res = calcDxDyDistanceWithOther(tarObj)
-
-        double dx = res[0]
-        double dy = res[1]
+        // Get value for FOV calculation
+        double dx = -res[0]
+        double dy = -res[1]
         double distance = res[2]
 
-        if (distance > CAMERA_RADIUS) return false
+        // Outside radius
+        if (distance > RADIUS) {
+            return false
+        }
 
+        // Calculate the absolute angle of an object (-180, 180)
         double angle = Math.toDegrees(Math.atan2(dy, dx))
-        return Math.abs(angle) <= CAMERA_ANGLE / 2
+
+        // Get relative angle
+        double relativeAngle = ROTATION - angle
+
+        // Determine whether it is within the angle range
+        return Math.abs(relativeAngle) <= ANGLE / 2
+    }
+
+    private List<Target> getAvailableTargets() {
+        List<Target> availableTargets = []
+        context.getObjects(Target)
+                .findAll { obj ->
+                    def target = obj as Target
+                    if (!target.isTracked && isInFOV(target)) {
+                        availableTargets << target
+                    }
+                }
+        availableTargets
+    }
+
+    String getLabel() {
+        return "c$id"
     }
 }
 
