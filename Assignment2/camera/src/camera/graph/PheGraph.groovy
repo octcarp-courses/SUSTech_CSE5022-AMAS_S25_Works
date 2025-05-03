@@ -3,6 +3,9 @@ package camera.graph
 import camera.utils.ParameterUtils
 import groovy.transform.CompileStatic
 
+/**
+ * Pheromone vision graph
+ */
 @CompileStatic
 class PheGraph {
     private final int dim
@@ -69,7 +72,10 @@ class PheGraph {
             }
         }
     }
-
+    
+    /**
+     * Initialize graph when be created
+     */
     void initGraph() {
         (1..dim).each { i ->
             pheromoneMap.put(i, [:])

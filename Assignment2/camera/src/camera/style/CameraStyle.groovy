@@ -13,39 +13,44 @@ import saf.v3d.scene.VSpatial
 
 import repast.simphony.space.continuous.ContinuousSpace
 
+/**
+ * Camera style
+ */
 @CompileStatic
 class CameraStyle extends DefaultStyleOGL2D {
-
-//    @Override
-//    VSpatial getVSpatial(Object agent, VSpatial spatial) {
-//        if (agent instanceof Camera) {
-//            Camera cam = agent as Camera
-//            ContinuousSpace space = cam.space
-//            def location = space.getLocation(cam)
-//
-//            double x = location.x
-//            double y = location.y
-//            double radius = cam.RADIUS
-//            double angle = cam.ANGLE
-//            double rotation = cam.ROTATION
-//
-//            double angle1 = Math.toRadians(rotation + angle / 2)
-//            double angle2 = Math.toRadians(rotation - angle / 2)
-//
-//            double x1 = x + radius * Math.cos(angle1)
-//            double y1 = y + radius * Math.sin(angle1)
-//            double x2 = x + radius * Math.cos(angle2)
-//            double y2 = y + radius * Math.sin(angle2)
-//
-//            Path2D.Double triangle = new Path2D.Double()
-//            triangle.moveTo(x, y)
-//            triangle.lineTo(x1, y1)
-//            triangle.lineTo(x2, y2)
-//            triangle.closePath()
-//
-//            return shapeFactory.createShape(triangle)
-//        }
-//    }
+    ///**
+    // * Responsible for the 2D drawing of the camera (not successfully implemented)
+    //*/
+    //@Override
+    //VSpatial getVSpatial(Object agent, VSpatial spatial) {
+    //    if (agent instanceof Camera) {
+    //        Camera cam = agent as Camera
+    //        ContinuousSpace space = cam.space
+    //        def location = space.getLocation(cam)
+    //
+    //        double x = location.x
+    //        double y = location.y
+    //        double radius = cam.RADIUS
+    //        double angle = cam.ANGLE
+    //        double rotation = cam.ROTATION
+    //
+    //        double angle1 = Math.toRadians(rotation + angle / 2)
+    //        double angle2 = Math.toRadians(rotation - angle / 2)
+    //
+    //        double x1 = x + radius * Math.cos(angle1)
+    //        double y1 = y + radius * Math.sin(angle1)
+    //        double x2 = x + radius * Math.cos(angle2)
+    //        double y2 = y + radius * Math.sin(angle2)
+    //
+    //        Path2D.Double triangle = new Path2D.Double()
+    //        triangle.moveTo(x, y)
+    //        triangle.lineTo(x1, y1)
+    //        triangle.lineTo(x2, y2)
+    //        triangle.closePath()
+    //
+    //        return shapeFactory.createShape(triangle)
+    //    }
+    //}
 
     @Override
     String getLabel(Object object) {

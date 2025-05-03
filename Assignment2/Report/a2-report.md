@@ -62,7 +62,7 @@ After the communication is established, I will also use auctions to achieve the 
     │      PheGraph.groovy # graph main class
     │      PStrategy.groovy # Probability Strategy enumerate class
     │
-    ├─style
+    ├─style # for repast GUI
     │      CameraStyle.groovy
     │
     └─utils # singleton

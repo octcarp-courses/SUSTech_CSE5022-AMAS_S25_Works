@@ -34,8 +34,10 @@ import repast.simphony.space.continuous.NdPoint
  * The neighborhood of cameras are maintained using a vision graph. This vision
  * graph can be dynamically updated using an approach similar to Ant Colony
  * Optimization (ACO).
+ * 
+ * @author OctCarp
+ * @version 0.1
  */
-
 @CompileStatic
 class Camera implements SpaceTrait {
     private final Context context
@@ -93,9 +95,7 @@ class Camera implements SpaceTrait {
             }
         }
         ownedTargets = stillOwned
-        //		needHandover.each { target ->
-        //			handover(target)
-        //		}
+
         // track owned objects
         trackObjects()
     }

@@ -2,6 +2,9 @@ package camera.agent
 
 import groovy.transform.CompileStatic
 
+/**
+ * For define camera creation parameters
+ */
 @CompileStatic
 class CameraParam {
     final double x

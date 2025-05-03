@@ -5,6 +5,9 @@ import groovy.transform.CompileStatic
 import repast.simphony.engine.environment.RunEnvironment
 import repast.simphony.parameter.Parameters
 
+/**
+ * Parameter manager singleton class
+ */
 @CompileStatic
 class ParameterUtils {
     private static ParameterUtils instance = null;
@@ -26,12 +29,17 @@ class ParameterUtils {
 
     private final Parameters parameters = RunEnvironment.instance.parameters
     
+    // System random seed
     final int SYSTEM_RANDOM_SEED = getInt("randomSeed", -1)
     
+    // Camera scenario preset id
     final int SCENARIO_ID = getInt("SCENARIO_ID", 0)
 
+    // Camera default radius
     final double CAMERA_RADIUS = getDouble("CAMERA_RADIUS", 15.0)
+    // Camera default angle of view
     final double CAMERA_ANGLE = getDouble("CAMERA_ANGLE", 120.0)
+    // Max number of a single camera could track
     final int CAMERA_MAX_TRACK = getInt("CAMERA_MAX_TRACK", 5)
 
     // Number of target objects in the simulation

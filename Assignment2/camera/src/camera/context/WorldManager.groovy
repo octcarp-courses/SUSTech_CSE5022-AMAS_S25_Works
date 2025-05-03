@@ -13,10 +13,9 @@ import camera.utils.ParameterUtils
 import camera.context.WorldManager
 
 /***
- * The world controller is responsible for initializing the agents and
+ * The world manager is responsible for initializing the agents and
  * maintaining the vision graph.
  */
-
 @CompileStatic
 class WorldManager {
 

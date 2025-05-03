@@ -4,6 +4,9 @@ import groovy.transform.CompileStatic
 
 import repast.simphony.space.continuous.NdPoint
 
+/**
+ * Utils for 2D space item
+ */
 @CompileStatic
 class SpaceUtils {
     static double[] calcDxDyDistance(NdPoint a, NdPoint b) {

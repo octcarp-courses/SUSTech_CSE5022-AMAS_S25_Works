@@ -15,6 +15,9 @@ import repast.simphony.space.grid.Grid
 import camera.data.DataHandler
 import camera.utils.ParameterUtils
 
+/**
+ * Context builder class
+ */
 @CompileStatic
 class MultiCameraTrackingBuilder implements ContextBuilder {
     private static final String SPACE_NAME = "space"

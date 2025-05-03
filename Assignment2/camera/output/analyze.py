@@ -33,21 +33,24 @@ def draw_graph(filename: str) -> None:
 
     batch_groups = df.groupby("batch")
 
-    def custom_layout(G: nx.Graph) -> dict:
-        pos = {}
-        for i, node in enumerate([1, 2, 3, 4]):
-            pos[node] = (i, 0)
-        for i, node in enumerate([5, 6, 7, 8]):
-            pos[node] = (i, 1)
-        return pos
+    def custom_layout(G: nx.DiGraph) -> dict:
+        if len(G.nodes) == 8:
+            pos = {}
+            for i, node in enumerate([1, 2, 3, 4]):
+                pos[node] = (i, 0)
+            for i, node in enumerate([5, 6, 7, 8]):
+                pos[node] = (i, 1)
+            return pos
+        else:
+            return nx.spring_layout(G, seed=42)
 
     for batch, group in batch_groups:
         filtered_group = group[group["value"] > GRAPH_THRESHOLD]
 
-        G = nx.Graph()
+        G = nx.DiGraph()
 
         for _, row in filtered_group.iterrows():
-            G.add_edge(row["fromId"], row["toId"], weight=row["value"])
+            G.add_edge(int(row["fromId"]), int(row["toId"]), weight=row["value"])
 
         plt.figure(figsize=(8, 6))
         pos = custom_layout(G)

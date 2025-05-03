@@ -3,6 +3,9 @@ package camera.context
 import camera.agent.CameraParam
 import groovy.transform.CompileStatic
 
+/**
+ * Camera scenarios preset
+ */
 @CompileStatic
 class CameraScenario {
     final static List<CameraScenario> scenarios = []

@@ -11,17 +11,17 @@ import repast.simphony.engine.schedule.ScheduledMethod
 
 import camera.utils.ParameterUtils
 
-
+/**
+ * Class responsible for collect data
+ */
 @CompileStatic
 class DataHandler {
     private static DataHandler instance = null
 
-    private final String FILE_DIR = './output/temp_csv/'
+    private static final String FILE_DIR = './output/temp_csv/'
 
-    private int times = 0
-
-    private String trackCountFileName = 'track_count'
-    private String pheGraphFileName = 'phe_graph'
+    private static final String trackCountFileName = 'track_count'
+    private static final String pheGraphFileName = 'phe_graph'
 
     private DataHandler() {
         initDirectory()
@@ -117,31 +117,5 @@ class DataHandler {
         pheGraphFileName = "graph_$parameterName"
     }
 
-
-    //    void dealRobotsData(List<Robot> robots) {
-    //        List<RobotData> allRobotData = []
-    //        robots.each { robot ->
-    //            allRobotData.addAll(robot.robotDataList)
-    //        }
-    //
-    //        def filePath = "${FILE_DIR}${fileName}.csv"
-    //        CSVWriter writer = new CSVWriter(new FileWriter(filePath, false))
-    //        writer.writeNext(["tick", "robot_id", "score", "energy", "cur_loc", "tar_loc"] as String[])
-    //
-    //        allRobotData.each { record ->
-    //            writer.writeNext([
-    //                record.tick.toString(),
-    //                record.id.toString(),
-    //                record.score.toString(),
-    //                record.energy.toString(),
-    //                record.location.toString(),
-    //                record.target.toString()
-    //            ] as String[])
-    //        }
-    //
-    //        writer.close()
-    //
-    //        println "Successfully write to ${filePath}"
-    //    }
 }
 

@@ -7,6 +7,9 @@ import repast.simphony.space.continuous.NdPoint
 
 import camera.utils.SpaceUtils
 
+/**
+ * Item in ContinuousSpace should implement this trait
+ */
 @CompileStatic
 trait SpaceTrait {
     ContinuousSpace space
