@@ -1,5 +1,6 @@
+from pettingzoo import ParallelEnv
 from pettingzoo.sisl import pursuit_v4
-from agent import (
+from agents import (
     IqlAgent,
     IqlAgentConfig,
     CqlAgent,
@@ -10,7 +11,7 @@ import logging
 
 def main() -> None:
     logging.info("Starting pursuit environment")
-    env = pursuit_v4.parallel_env(render_mode="human")
+    env: ParallelEnv = pursuit_v4.parallel_env(render_mode="human")
     observations, infos = env.reset()
 
     while env.agents:

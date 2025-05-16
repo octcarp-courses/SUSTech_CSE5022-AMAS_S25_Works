@@ -6,7 +6,8 @@ from dataclasses import dataclass, asdict
 class BaseAgentConfig:
     # env info
     obs_dim: int = None
-    act_dim: int = None  # For DQN, this is num_actions. For CQL, this is total joint discrete actions.
+    # For DQN, this is num_actions. For CQL, this is total joint discrete actions.
+    act_dim: int = None
     hidden_dim: int = 128
     # training
     batch_size: int = 128

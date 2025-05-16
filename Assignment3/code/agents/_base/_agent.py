@@ -27,36 +27,44 @@ class BaseAgentConfig:
     mem_size: int = 10_000
 
     def validate(self) -> None:
-        assert (self.obs_dim is not None)
-        assert (self.act_dim is not None)
+        assert self.obs_dim is not None
+        assert self.act_dim is not None
 
     def to_dict(self) -> dict:
         return asdict(self)
 
 
 class BaseAgent:
-    def __init__(self, sid: str, config: BaseAgentConfig, act_sampler: callable, device=None):
+    def __init__(
+        self, sid: str, config: BaseAgentConfig, act_sampler: callable, device=None
+    ):
         self.sid: str = sid
         self.config: BaseAgentConfig = config
         self.config.validate()
         self.act_sampler: callable = act_sampler  # action sampler function
         self.device = device or torch.device(
-            "cuda" if torch.cuda.is_available() else
-            "mps" if torch.backends.mps.is_available() else "cpu"
+            "cuda"
+            if torch.cuda.is_available()
+            else "mps" if torch.backends.mps.is_available() else "cpu"
         )
 
         # DQN
         self.replay_memory: ReplayMemory = ReplayMemory(capacity=self.config.mem_size)
         self.eps: float = self.config.eps_start
 
-        self.policy_net: DQN = DQN(config.obs_dim, config.act_dim, config.hidden_dim).to(self.device)
-        self.target_net: DQN = DQN(config.obs_dim, config.act_dim, config.hidden_dim).to(self.device)
+        self.policy_net: DQN = DQN(
+            config.obs_dim, config.act_dim, config.hidden_dim
+        ).to(self.device)
+        self.target_net: DQN = DQN(
+            config.obs_dim, config.act_dim, config.hidden_dim
+        ).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net.eval()
 
         # opt & loss criterion
-        self.opt: torch.optim.Optimizer = torch.optim.AdamW(self.policy_net.parameters(), lr=self.config.lr,
-                                                            amsgrad=True)
+        self.opt: torch.optim.Optimizer = torch.optim.AdamW(
+            self.policy_net.parameters(), lr=self.config.lr, amsgrad=True
+        )
         self.criterion = nn.SmoothL1Loss()
 
     def select_action(self, state: torch.Tensor, **kwargs):

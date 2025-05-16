@@ -1,19 +1,21 @@
 from itertools import count
 import torch
 
-from agent import IqlAgent, DQN
+from agents import IqlAgent, DQN
 from pettingzoo.sisl import pursuit_v4
 
-from agent import BaseAgent
+from agents import BaseAgent
 from .common import get_agent_wise_cumulative_rewards
 
 
-def update_agent_dqns(cur_agents:dict[str, IqlAgent], best_mean: float) -> float:
+def update_agent_dqns(cur_agents: dict[str, IqlAgent], best_mean: float) -> float:
     with torch.no_grad():
         cur_eval_res = eval_agent(
             cur_agents,
-            dqns={cur_agent.sid: cur_agent.policy_net for cur_agent in cur_agents.values()},
-            n_episodes=10
+            dqns={
+                cur_agent.sid: cur_agent.policy_net for cur_agent in cur_agents.values()
+            },
+            n_episodes=10,
         )
     avg_eval_res = get_agent_wise_cumulative_rewards(cur_eval_res)
     all_avg_eval_res = sum(avg_eval_res.values()) / len(avg_eval_res)

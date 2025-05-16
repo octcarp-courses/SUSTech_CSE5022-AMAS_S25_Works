@@ -6,9 +6,9 @@ def plot_episodes(durations: list[float], clear_after: bool = True) -> None:
     plt.figure(1)
     durations_t = torch.tensor(durations, dtype=torch.float)
     plt.clf()
-    plt.title('Training...')
-    plt.xlabel('Episode')
-    plt.ylabel('Avg. Return')
+    plt.title("Training...")
+    plt.xlabel("Episode")
+    plt.ylabel("Avg. Return")
     plt.plot(durations_t.numpy())
     # take 10 episode averages and plot them too
 

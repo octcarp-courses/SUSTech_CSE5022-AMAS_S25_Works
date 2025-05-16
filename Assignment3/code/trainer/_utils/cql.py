@@ -2,7 +2,7 @@ from itertools import count
 
 import torch
 
-from agent import CqlAgent, DQN
+from agents import CqlAgent, DQN
 from pettingzoo.sisl import pursuit_v4
 
 from .common import get_agent_wise_cumulative_rewards
