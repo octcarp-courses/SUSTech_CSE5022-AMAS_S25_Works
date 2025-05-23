@@ -1,4 +1,3 @@
-import math
 from dataclasses import dataclass, asdict
 
 
@@ -8,7 +7,7 @@ class BaseAgentConfig:
     obs_dim: int = None
     # For DQN, this is num_actions. For CQL, this is total joint discrete actions.
     act_dim: int = None
-    hidden_dim: int = 128
+    hidden_dims: list[int] = ([128],)
     # training
     batch_size: int = 128
     lr: float = 1e-4

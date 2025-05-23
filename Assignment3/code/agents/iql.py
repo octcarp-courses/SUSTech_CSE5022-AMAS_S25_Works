@@ -4,8 +4,7 @@ import torch
 from torch import nn
 import random
 
-from ._base import Transition, BaseAgentConfig
-from ._base._agent import BaseAgent
+from ._base import Transition, BaseAgentConfig, BaseAgent, DQN
 
 
 @dataclass
@@ -21,7 +20,7 @@ class IqlAgent(BaseAgent):
         self.config: IqlAgentConfig = config
 
     def _select_action_eps(
-        self, state: torch.Tensor, dqn: nn.Module, eps: float = -1, **kwargs
+        self, state: torch.Tensor, dqn: DQN, eps: float = -1, **kwargs
     ):
         """
         input shape: 1 x obs_dim
@@ -34,7 +33,6 @@ class IqlAgent(BaseAgent):
                 [[self.act_sampler()]], device=self.device, dtype=torch.long
             )
             return sample_res
-
         with torch.no_grad():
             q_values: torch.Tensor = dqn(state)
             sel_res = q_values.argmax(dim=1).reshape(1, 1)

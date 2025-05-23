@@ -10,26 +10,31 @@ def _init_weights(layer: nn.Module, nonlinearity: str) -> None:
 
 
 class DQN(nn.Module):
-    def __init__(self, n_obs: int, n_act: int, n_hidden: int = 128):
+    def __init__(self, n_obs: int, n_act: int, hidden_dims: list[int]):
         super(DQN, self).__init__()
         self.obs_dim: int = n_obs
         self.act_dim: int = n_act
-        self.hidden_dim: int = n_hidden
+        self.hidden_dims: list[int] = hidden_dims
+
         # model
-        self.layers: nn.Sequential = nn.Sequential(
-            nn.Linear(self.obs_dim, self.hidden_dim),
-            nn.ReLU(),
-            nn.Linear(self.hidden_dim, self.hidden_dim),
-            nn.ReLU(),
-            nn.Linear(self.hidden_dim, self.act_dim),
-        )
+        layers: list[nn.Module] = []
+        input_dim = self.obs_dim
+
+        for h_dim in self.hidden_dims:
+            layers.append(nn.Linear(input_dim, h_dim))
+            layers.append(nn.ReLU())
+            input_dim = h_dim
+
+        layers.append(nn.Linear(input_dim, self.act_dim))
+
+        self.network: nn.Sequential = nn.Sequential(*layers)
         self._reset_parameters()
 
     def _reset_parameters(self) -> None:
         # re-initialize learnable parameters
-        for layer in self.layers:
+        for layer in self.network:
             _init_weights(layer, nonlinearity="relu")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        res = self.layers(x)
+        res = self.network(x)
         return res

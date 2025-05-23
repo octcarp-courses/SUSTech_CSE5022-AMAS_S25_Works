@@ -12,7 +12,7 @@ class BaseAgentConfig:
     # env info
     obs_dim: int = None
     act_dim: int = None
-    hidden_dim: int = 128
+    hidden_dims: list[int] = ([128],)
     # training
     batch_size: int = 128
     lr: float = 1e-4
@@ -37,7 +37,7 @@ class BaseAgentConfig:
 class BaseAgent:
     def __init__(
         self, sid: str, config: BaseAgentConfig, act_sampler: callable, device=None
-    ):
+    ) -> None:
         self.sid: str = sid
         self.config: BaseAgentConfig = config
         self.config.validate()
@@ -53,10 +53,10 @@ class BaseAgent:
         self.eps: float = self.config.eps_start
 
         self.policy_net: DQN = DQN(
-            config.obs_dim, config.act_dim, config.hidden_dim
+            config.obs_dim, config.act_dim, config.hidden_dims
         ).to(self.device)
         self.target_net: DQN = DQN(
-            config.obs_dim, config.act_dim, config.hidden_dim
+            config.obs_dim, config.act_dim, config.hidden_dims
         ).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net.eval()
