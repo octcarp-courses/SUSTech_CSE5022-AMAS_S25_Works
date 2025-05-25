@@ -21,7 +21,7 @@ class IqlAgent(BaseAgent):
 
     def _select_action_eps(
         self, state: torch.Tensor, dqn: DQN, eps: float = -1, **kwargs
-    ):
+    ) -> torch.Tensor:
         """
         input shape: 1 x obs_dim
         output shape: 1 x 1

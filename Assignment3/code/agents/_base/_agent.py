@@ -1,37 +1,9 @@
 import torch
 from torch import nn
 
-from ._network import DQN
+from ._config import BaseAgentConfig
 from ._memory import ReplayMemory
-
-from dataclasses import dataclass, asdict
-
-
-@dataclass
-class BaseAgentConfig:
-    # env info
-    obs_dim: int = None
-    act_dim: int = None
-    hidden_dims: list[int] = ([128],)
-    # training
-    batch_size: int = 128
-    lr: float = 1e-4
-    grad_clip_value: float = 100
-    # gamma: discount factor
-    gamma: float = 0.99
-    # epsilon: exploration probability
-    eps_start: float = 0.9
-    eps_decay: float = 0.95
-    eps_min: float = 0.01
-    # replay memory
-    mem_size: int = 10_000
-
-    def validate(self) -> None:
-        assert self.obs_dim is not None
-        assert self.act_dim is not None
-
-    def to_dict(self) -> dict:
-        return asdict(self)
+from ._network import DQN
 
 
 class BaseAgent:

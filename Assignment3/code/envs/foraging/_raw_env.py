@@ -3,6 +3,7 @@ import functools
 import numpy as np
 from gymnasium.spaces import Discrete, Box
 from gymnasium.utils import EzPickle
+from mpmath.libmp.libintmath import ifac2
 
 from pettingzoo import AECEnv
 from pettingzoo.utils import AgentSelector, wrappers
@@ -10,6 +11,7 @@ from pettingzoo.utils.conversions import parallel_wrapper_fn
 
 from pettingzoo.utils.env import ObsType
 
+from ._render import ForagingRenderer
 
 def env(**kwargs):
     foraging_env = RawEnv(**kwargs)
@@ -20,34 +22,37 @@ def env(**kwargs):
 
 parallel_env = parallel_wrapper_fn(env)
 
-from ._render import ForagingRenderer
-
-ACTION_MAP: dict[int, tuple[int, int]] = {
-    0: (0, 0),  # Stay
-    1: (-1, 0),  # Up
-    2: (1, 0),  # Down
-    3: (0, -1),  # Left
-    4: (0, 1),  # Right
-}
-
-
 class RawEnv(AECEnv, EzPickle):
     metadata = {
         "render_modes": ["human"],
         "name": "foraging",
         "is_parallelizable": True,
-        "render_fps": 5,
+        "render_fps": 10,
     }
+    ACTION_MAP: dict[int, tuple[int, int]] = {
+        0: (0, 0),  # Stay
+        1: (-1, 0),  # Up
+        2: (1, 0),  # Down
+        3: (0, -1),  # Left
+        4: (0, 1),  # Right
+    }
+
+    AGENT_TYPE: int = 1
+    OTHER_AGENT_TYPE: int = 2
+    CROP_TYPE: int = 3
+    PADDING_TYPE: int = -1
 
     def __init__(
         self,
-        x_size: int = 7,
-        y_size: int = 7,
+        x_size: int = 10,
+        y_size: int = 8,
         n_foragers: int = 3,
         n_crops: int = 10,
+        obs_range: int = 3,
         forager_levels: list[int] | None = None,
         crop_levels: list[int] | None = None,
         max_cycles: int = 100,
+        reward_idx: int = 0,
         render_mode: str | None = None,
     ) -> None:
         EzPickle.__init__(self)
@@ -63,6 +68,7 @@ class RawEnv(AECEnv, EzPickle):
         self.y_size = y_size
         self.n_foragers = n_foragers
         self.n_crops = n_crops
+        self.obs_range = obs_range
 
         self.forager_levels_config = forager_levels
         self.crop_levels_config = crop_levels
@@ -71,12 +77,13 @@ class RawEnv(AECEnv, EzPickle):
         self.max_cycles = max_cycles
         self.render_mode = render_mode
 
+        self.reward_idx = reward_idx
+
         self.possible_agents = [f"forager_{i}" for i in range(n_foragers)]
         self.agent_name_mapping = {
             name: i for i, name in enumerate(self.possible_agents)
         }
 
-        # Internal state variables, initialized in reset()
         self.agent_positions: dict[str, tuple[int, int]] = {}
         self.agent_levels: dict[str, int] = {}
         self.crop_positions: list[tuple[int, int]] = []
@@ -85,37 +92,19 @@ class RawEnv(AECEnv, EzPickle):
 
         self._agent_selector: AgentSelector = AgentSelector(
             self.possible_agents
-        )  # Will be reinitialized in reset
+        )
         self._actions_this_turn: dict[str, int] = {}
         self.current_step: int = 0
 
     @functools.lru_cache(maxsize=None)
     def observation_space(self, agent) -> Box:
-        # gymnasium spaces are defined and documented here: https://gymnasium.farama.org/api/spaces/
         return Box(low=0, high=10, shape=(2, self.x_size, self.y_size), dtype=np.int8)
 
-    # Action space should be defined here.
-    # If your spaces change over time, remove this line (disable caching).
     @functools.lru_cache(maxsize=None)
     def action_space(self, agent) -> Discrete:
-        # We can seed the action space to make the environment deterministic.
-        return Discrete(len(ACTION_MAP), seed=self.np_random_seed)
+        return Discrete(len(self.ACTION_MAP), seed=self.np_random_seed)
 
     def reset(self, seed=None, options=None) -> ObsType:
-        """
-        Reset needs to initialize the following attributes
-        - agents
-        - rewards
-        - _cumulative_rewards
-        - terminations
-        - truncations
-        - infos
-        - agent_selection
-        And must set up the environment so that render(), step(), and observe()
-        can be called without issues.
-        Here it sets up the state dictionary which is used by step() and the observations dictionary which is used by step() and observe()
-        """
-        # Unlike gymnasium's Env, the environment is responsible for setting the random seed explicitly.
         if seed is not None:
             np.random.seed(seed)
 
@@ -152,15 +141,14 @@ class RawEnv(AECEnv, EzPickle):
         f_levels = (
             _get_random_level(self.n_foragers, self.max_level_param)
             if self.forager_levels_config is None
-            else self.forager_levels_config
+            else self.forager_levels_config.copy()
         )
-        for i, agent_id in enumerate(self.possible_agents):
+        for i, a_id in enumerate(self.possible_agents):
             pos = _get_valid_pos(self.x_size, self.y_size)
-            self.agent_positions[agent_id] = pos
+            self.agent_positions[a_id] = pos
             occupied_cells.add(pos)
-            self.agent_levels[agent_id] = f_levels[i]
+            self.agent_levels[a_id] = f_levels[i]
 
-        # Initialize crops
         self.crop_positions.clear()
         self.crop_levels.clear()
         self.crop_removed = [False] * self.n_crops
@@ -170,7 +158,7 @@ class RawEnv(AECEnv, EzPickle):
                 self.max_level_param + 1,
             )
             if self.crop_levels_config is None
-            else self.crop_levels_config
+            else self.crop_levels_config.copy()
         )
         for i in range(self.n_crops):
             pos = _get_valid_pos(self.x_size, self.y_size)
@@ -180,66 +168,115 @@ class RawEnv(AECEnv, EzPickle):
         return self.observe(self.agents[0])
 
     def close(self) -> None:
-        """
-        Close should release any graphical displays, subprocesses, network connections
-        or any other environment data which should not be kept around after the
-        user is no longer using the environment.
-        """
         if self._renderer is not None:
             self._renderer.close()
             self._renderer = None
 
-    def observe(self, agent_id: str) -> ObsType:
-        """
-        Observe should return the observation of the specified agent. This function
-        should return a sane observation (though not necessarily the most up-to-date possible)
-        at any time after reset() is called.
-        """
+    def observe2(self, a_id: str) -> ObsType:
         obs_type_grid = np.zeros((self.x_size, self.y_size), dtype=np.int8)
         obs_level_grid = np.zeros((self.x_size, self.y_size), dtype=np.int8)
 
-        for i, crop_pos_list in enumerate(self.crop_positions):
+        for i, crop_pos in enumerate(self.crop_positions):
             if not self.crop_removed[i]:
-                x, y = crop_pos_list
-                obs_type_grid[x, y] = 3
+                x, y = crop_pos
+                obs_type_grid[x, y] = self.CROP_TYPE
                 obs_level_grid[x, y] = self.crop_levels[i]
 
-        for other_agent_id, pos_list in self.agent_positions.items():
-            if other_agent_id not in self.agent_levels:
+        for other_a_id, pos_list in self.agent_positions.items():
+            if other_a_id not in self.agent_levels:
                 continue
             x, y = pos_list
-            level = self.agent_levels[other_agent_id]
-            if other_agent_id == agent_id:
-                obs_type_grid[x, y] = 1
+            level = self.agent_levels[other_a_id]
+            if other_a_id == a_id:
+                obs_type_grid[x, y] = self.AGENT_TYPE
             else:
-                obs_type_grid[x, y] = 2
+                obs_type_grid[x, y] = self.OTHER_AGENT_TYPE
             obs_level_grid[x, y] = level
 
         return np.stack([obs_type_grid, obs_level_grid], axis=0).astype(np.int8)
+
+    def observe(self, a_id: str) -> ObsType:
+        g_obs_type = np.zeros((self.x_size, self.y_size), dtype=np.int8)
+        g_obs_level = np.zeros((self.x_size, self.y_size), dtype=np.int8)
+
+        for i, crop_pos in enumerate(self.crop_positions):
+            if not self.crop_removed[i]:
+                x, y = crop_pos
+                if 0 <= x < self.x_size and 0 <= y < self.y_size:
+                    g_obs_type[x, y] = self.CROP_TYPE
+                    g_obs_level[x, y] = self.crop_levels[i]
+
+        for other_a_id, pos in self.agent_positions.items():
+            x, y = pos
+            level = self.agent_levels[other_a_id]
+
+            if 0 <= x < self.x_size and 0 <= y < self.y_size:
+                if other_a_id == a_id:
+                    g_obs_type[x, y] = self.AGENT_TYPE
+                else:
+                    g_obs_type[x, y] = self.OTHER_AGENT_TYPE
+                g_obs_level[x, y] = level
+
+        local_dim = 2 * self.obs_range + 1
+        a_x, a_y = self.agent_positions[a_id]
+
+        g_xmin = a_x - self.obs_range
+        g_xmax = a_x + self.obs_range + 1
+        g_ymin = a_y - self.obs_range
+        g_ymax = a_y + self.obs_range + 1
+
+        g_xmin_actual = max(0, g_xmin)
+        g_xmax_actual = min(self.x_size, g_xmax)
+        g_ymin_actual = max(0, g_ymin)
+        g_ymax_actual = min(self.y_size, g_ymax)
+
+        extracted_type_patch = g_obs_type[g_xmin_actual:g_xmax_actual, g_ymin_actual:g_ymax_actual]
+        extracted_level_patch = g_obs_level[g_xmin_actual:g_xmax_actual, g_ymin_actual:g_ymax_actual]
+
+        pad_x_before = max(0, -g_xmin)
+        pad_x_after = max(0, g_xmax - self.x_size)
+        pad_y_before = max(0, -g_ymin)
+        pad_y_after = max(0, g_ymax - self.y_size)
+
+        local_obs_type = np.pad(
+            extracted_type_patch,
+            ((pad_x_before, pad_x_after), (pad_y_before, pad_y_after)),
+            mode='constant',
+            constant_values=self.PADDING_TYPE
+        )
+
+        local_obs_level = np.pad(
+            extracted_level_patch,
+             ((pad_x_before, pad_x_after), (pad_y_before, pad_y_after)),
+             mode='constant',
+             constant_values=self.PADDING_TYPE
+        )
+
+        return np.stack([local_obs_type, local_obs_level], axis=0).astype(np.int8)
 
     def _move_all_agents(self) -> None:
         active_crop_locations = set()
         for i, pos in enumerate(self.crop_positions):
             if not self.crop_removed[i]:
                 active_crop_locations.add(tuple(pos))
-        for agent_id in self.agents:
-            if self._is_invalid_agent(agent_id):
+        for a_id in self.agents:
+            if self._is_invalid_agent(a_id):
                 continue
 
-            agent_action = self._actions_this_turn[agent_id]
+            agent_action = self._actions_this_turn[a_id]
             if agent_action == 0:
                 continue
 
-            dx, dy = ACTION_MAP[agent_action]
-            x, y = self.agent_positions[agent_id]
+            dx, dy = self.ACTION_MAP[agent_action]
+            x, y = self.agent_positions[a_id]
             new_x, new_y = x + dx, y + dy
 
             if 0 <= new_x < self.x_size and 0 <= new_y < self.y_size:
                 if (new_x, new_y) not in active_crop_locations:
-                    self.agent_positions[agent_id] = (new_x, new_y)
+                    self.agent_positions[a_id] = (new_x, new_y)
 
-    def _is_invalid_agent(self, agent_id: str) -> bool:
-        return self.terminations[agent_id] or self.truncations[agent_id]
+    def _is_invalid_agent(self, a_id: str) -> bool:
+        return self.terminations[a_id] or self.truncations[a_id]
 
     def step(self, action: int) -> None:
         agent = self.agent_selection
@@ -251,8 +288,8 @@ class RawEnv(AECEnv, EzPickle):
         self._actions_this_turn[agent] = action
         if self._agent_selector.is_last():
             current_step_rewards = {
-                agent_id: -0.01
-                for agent_id in self.agents
+                a_id: -0.1
+                for a_id in self.agents
                 if not (self._is_invalid_agent(agent))
             }
 
@@ -263,57 +300,59 @@ class RawEnv(AECEnv, EzPickle):
                 crop_pos = self.crop_positions[crop_idx]
                 crop_level = self.crop_levels[crop_idx]
 
-                adj_agent_level: int = 0
-                adj_agent_ids = []
+                adj_agent_levels: list[int] = []
+                adj_a_ids: list[str] = []
 
-                for agent_id in self.agents:
+                for a_id in self.agents:
                     if self._is_invalid_agent(agent):
                         continue
 
-                    agent_pos = self.agent_positions[agent_id]
+                    agent_pos = self.agent_positions[a_id]
                     if (
                         abs(agent_pos[0] - crop_pos[0])
                         + abs(agent_pos[1] - crop_pos[1])
                         == 1
                     ):
-                        adj_agent_level += self.agent_levels[agent_id]
-                        adj_agent_ids.append(agent_id)
+                        adj_agent_levels.append(self.agent_levels[a_id])
+                        adj_a_ids.append(a_id)
+                level_sum = np.sum(adj_agent_levels)
+                if level_sum >= crop_level >= 0:
+                    def reward0() -> float:
+                        return 6.0
+                    def reward1() -> float:
+                        return 2 * float(crop_level)
 
-                if adj_agent_level >= crop_level >= 0:
                     self.crop_removed[crop_idx] = True
-                    base_harvest_reward = 10.0
-                    level_bonus = float(crop_level)
-                    total_crop_reward = base_harvest_reward + level_bonus
+                    total_crop_reward = reward0() if crop_level == 0 else reward1()
 
-                    if adj_agent_ids:
-                        shared_reward = total_crop_reward / len(adj_agent_ids)
-                        for a_id in adj_agent_ids:
+                    if adj_a_ids:
+                        for a_id in adj_a_ids:
+                            local_reward = total_crop_reward * (self.agent_levels[a_id] / level_sum)
                             current_step_rewards[a_id] = (
-                                current_step_rewards.get(a_id, 0.0) + shared_reward
+                                current_step_rewards.get(a_id, 0.0) + local_reward
                             )
-                    # Optional: Small global reward for all agents when a crop is harvested
-                    # for ag_id in self.agents:
-                    #    if not (self.terminations[ag_id] or self.truncations[ag_id]):
-                    #        current_step_rewards[ag_id] = current_step_rewards.get(ag_id, 0.0) + 0.5
+                    for a_id in self.agents:
+                       if not (self.terminations[a_id] or self.truncations[a_id]):
+                           current_step_rewards[a_id] = current_step_rewards.get(a_id, 0.0) + 0.5
 
-            for agent_id in self.agents:
+            for a_id in self.agents:
                 if not self._is_invalid_agent(agent):
-                    self.rewards[agent_id] = current_step_rewards.get(agent_id, 0.0)
+                    self.rewards[a_id] = current_step_rewards.get(a_id, 0.0)
 
             self.current_step += 1
             all_crops_harvested = all(self.crop_removed)
 
             episode_is_over = False
             if all_crops_harvested:
-                for agent_id in self.agents:
-                    self.terminations[agent_id] = True
-                    self.rewards[agent_id] += 20.0
+                for a_id in self.agents:
+                    self.terminations[a_id] = True
+                    self.rewards[a_id] += 10.0
                 episode_is_over = True
 
             if not episode_is_over and self.current_step >= self.max_cycles:
-                for agent_id in self.agents:
-                    if not self.terminations[agent_id]:
-                        self.truncations[agent_id] = True
+                for a_id in self.agents:
+                    if not self.terminations[a_id]:
+                        self.truncations[a_id] = True
                 episode_is_over = True
 
             if episode_is_over:
@@ -321,16 +360,15 @@ class RawEnv(AECEnv, EzPickle):
 
             self._actions_this_turn = {}
 
-        for agent_id in self.possible_agents:
-            self._cumulative_rewards[agent_id] = self.rewards[agent_id]
-            self.infos[agent_id] = {}
+        for a_id in self.possible_agents:
+            self._cumulative_rewards[a_id] = self.rewards[a_id]
+            self.infos[a_id] = {}
 
         self.agent_selection = self._agent_selector.next()
         self.render()
 
     def render(self) -> None:
         if self.render_mode is None:
-            # gymnasium.logger.warn("You are calling render method without specifying any render mode.")
             return None
 
         if self.render_mode == "human":

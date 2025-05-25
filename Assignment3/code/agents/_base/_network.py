@@ -10,7 +10,7 @@ def _init_weights(layer: nn.Module, nonlinearity: str) -> None:
 
 
 class DQN(nn.Module):
-    def __init__(self, n_obs: int, n_act: int, hidden_dims: list[int]):
+    def __init__(self, n_obs: int, n_act: int, hidden_dims: list[int]) -> None:
         super(DQN, self).__init__()
         self.obs_dim: int = n_obs
         self.act_dim: int = n_act

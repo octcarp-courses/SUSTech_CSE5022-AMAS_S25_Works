@@ -2,30 +2,20 @@ import pygame
 
 
 class ForagingRenderer:
-    """
-    A class dedicated to handling the Pygame rendering for the Foraging environment.
-    """
-
     def __init__(
         self,
-        window_size: tuple[int, int] = (600, 600),
         render_fps: int = 5,
         display_name: str = "Foraging Environment",
-        agent_color: tuple[int, int, int] = (0, 0, 255),
-        crop_color: tuple[int, int, int] = (255, 0, 0),
-        bg_color: tuple[int, int, int] = (200, 200, 200),
-        grid_color: tuple[int, int, int] = (100, 100, 100),
-        text_color: tuple[int, int, int] = (0, 0, 0),
     ) -> None:
-        self.WINDOW_SIZE = window_size
+        self.WINDOW_SIZE  = (600, 600)
         self.render_fps = render_fps
         self.display_name = display_name
 
-        self.AGENT_COLOR = agent_color
-        self.CROP_COLOR = crop_color
-        self.BG_COLOR = bg_color
-        self.GRID_COLOR = grid_color
-        self.TEXT_COLOR = text_color
+        self.AGENT_COLOR = (0, 0, 255)
+        self.CROP_COLOR = (255, 0, 0)
+        self.BG_COLOR = (200, 200, 200)
+        self.GRID_COLOR = (100, 100, 100)
+        self.TEXT_COLOR = (0, 0, 0)
 
         self.pygame_viewer: pygame.Surface | None = None
         self.pygame_font: pygame.font.FontType | None = None
@@ -59,7 +49,6 @@ class ForagingRenderer:
         crop_levels: list[int],
         crop_removed: list[bool],
     ) -> None:
-        """Draws a single frame of the environment."""
         if not self._is_initialized:
             self._initialize_pygame()
 
@@ -109,8 +98,7 @@ class ForagingRenderer:
         pygame.display.flip()
         self.pygame_clock.tick(self.render_fps)
 
-    def close(self):
-        """Closes the Pygame display."""
+    def close(self) -> None:
         if self.pygame_viewer is not None:
             pygame.quit()
             self.pygame_viewer = None
