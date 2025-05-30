@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import torch
 from torch import nn
-import random
+import numpy as np
 
 from ._base import Transition, BaseAgentConfig, BaseAgent, DQN
 
@@ -28,7 +28,7 @@ class IqlAgent(BaseAgent):
         """
         if eps == -1:
             eps = self.eps
-        if random.random() < eps:
+        if np.random.random() < eps:
             sample_res = torch.tensor(
                 [[self.act_sampler()]], device=self.device, dtype=torch.long
             )

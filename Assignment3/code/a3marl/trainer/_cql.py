@@ -4,20 +4,18 @@ import torch
 
 from pettingzoo import ParallelEnv
 
-from agents import CqlAgent, DQN
-from envs.utils import EnvConfig
+from a3marl.agents import CqlAgent, DQN
+from a3marl.envs.utils import EnvConfig
 from ._utils import get_agent_wise_cumulative_rewards
 
-from utils import (
+from a3marl.utils import (
     plot_episodes,
     save_episode_acc_to_csv,
 )
 
 
 def update_agent_dqns(
-    env_config: EnvConfig,
-    central_agent: CqlAgent,
-    best_mean: float
+    env_config: EnvConfig, central_agent: CqlAgent, best_mean: float
 ) -> float:
     with torch.no_grad():
         cur_eval_res = eval_agent(
@@ -96,7 +94,7 @@ def trainer(
     num_episodes: int = 100,
     max_episode_lengths: int = 50,
     dqn_update_freq: int = 50,
-    show_plot:bool = False,
+    show_plot: bool = False,
 ) -> None:
     total_steps: int = 0
     best_mean: float = float("-inf")
@@ -119,7 +117,9 @@ def trainer(
                 actions = central_agent.select_action(
                     states, done_agents=dones
                 )  # agent_key => int | None
-                observations, rewards, terminations, truncations, infos = env.step(actions)
+                observations, rewards, terminations, truncations, infos = env.step(
+                    actions
+                )
                 dones = {
                     agent_key: (terminated or truncations[agent_key])
                     for agent_key, terminated in terminations.items()

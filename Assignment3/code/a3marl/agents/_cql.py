@@ -1,7 +1,7 @@
 import math
-import random
 from dataclasses import dataclass
 
+import numpy as np
 import torch
 import torch.nn as nn
 
@@ -84,7 +84,7 @@ class CqlAgent(BaseAgent):
             action = (
                 actions[agent_key]
                 if actions[agent_key] is not None
-                else random.randint(0, act_dim - 1)
+                else np.random.randint(0, act_dim - 1)
             )
             res += action * multiplier
             multiplier *= act_dim
@@ -120,7 +120,7 @@ class CqlAgent(BaseAgent):
         """
         if eps == -1:
             eps = self.eps
-        if random.random() < eps:
+        if np.random.random() < eps:
             # NOTE: here the sampler outputs a dict, rather than one single value
             return self.act_sampler()
 

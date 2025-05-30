@@ -7,7 +7,7 @@ class ForagingRenderer:
         render_fps: int = 5,
         display_name: str = "Foraging Environment",
     ) -> None:
-        self.WINDOW_SIZE  = (600, 600)
+        self.WINDOW_SIZE = (600, 600)
         self.render_fps = render_fps
         self.display_name = display_name
 

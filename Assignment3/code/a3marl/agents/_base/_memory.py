@@ -1,4 +1,4 @@
-import random
+import numpy as np
 from collections import namedtuple, deque
 
 # state: 1 x obs_dim
@@ -8,7 +8,7 @@ Transition = namedtuple("Transition", ("state", "action", "next_state", "reward"
 
 
 class ReplayMemory:
-    def __init__(self, capacity: int = 10_000):
+    def __init__(self, capacity: int = 10_000) -> None:
         self.memory: deque[Transition] = deque([], maxlen=capacity)
 
     def push(self, *args) -> None:
@@ -16,7 +16,11 @@ class ReplayMemory:
         self.memory.append(Transition(*args))
 
     def sample(self, batch_size: int) -> list[Transition]:
-        return random.sample(self.memory, batch_size)
+        if len(self.memory) < batch_size:
+            raise ValueError(
+                f"Not enough {len(self.memory)} samples for batch size: {batch_size}"
+            )
+        return np.random.choice(self.memory, size=batch_size, replace=False).tolist()
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.memory)

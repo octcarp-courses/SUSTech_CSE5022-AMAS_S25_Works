@@ -14,7 +14,7 @@ def _save_init() -> None:
 def save_episode_acc_to_csv(
     episode_means: list[float], file_name: str = "episode_means"
 ) -> None:
-    path: str = f"{_FOLDER}/{file_name}_lastest.csv"
+    path: str = f"{_FOLDER}/{file_name}_latest.csv"
     df = pd.DataFrame(episode_means, columns=["Episode Mean"])
 
     df.to_csv(path, index=False)

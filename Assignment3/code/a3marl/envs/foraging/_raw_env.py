@@ -13,6 +13,7 @@ from pettingzoo.utils.env import ObsType
 
 from ._render import ForagingRenderer
 
+
 def env(**kwargs):
     foraging_env = RawEnv(**kwargs)
     foraging_env = wrappers.AssertOutOfBoundsWrapper(foraging_env)
@@ -21,6 +22,7 @@ def env(**kwargs):
 
 
 parallel_env = parallel_wrapper_fn(env)
+
 
 class RawEnv(AECEnv, EzPickle):
     metadata = {
@@ -90,9 +92,7 @@ class RawEnv(AECEnv, EzPickle):
         self.crop_levels: list[int] = []
         self.crop_removed: list[bool] = []  # True if harvested
 
-        self._agent_selector: AgentSelector = AgentSelector(
-            self.possible_agents
-        )
+        self._agent_selector: AgentSelector = AgentSelector(self.possible_agents)
         self._actions_this_turn: dict[str, int] = {}
         self.current_step: int = 0
 
@@ -172,28 +172,29 @@ class RawEnv(AECEnv, EzPickle):
             self._renderer.close()
             self._renderer = None
 
-    def observe2(self, a_id: str) -> ObsType:
-        obs_type_grid = np.zeros((self.x_size, self.y_size), dtype=np.int8)
-        obs_level_grid = np.zeros((self.x_size, self.y_size), dtype=np.int8)
-
-        for i, crop_pos in enumerate(self.crop_positions):
-            if not self.crop_removed[i]:
-                x, y = crop_pos
-                obs_type_grid[x, y] = self.CROP_TYPE
-                obs_level_grid[x, y] = self.crop_levels[i]
-
-        for other_a_id, pos_list in self.agent_positions.items():
-            if other_a_id not in self.agent_levels:
-                continue
-            x, y = pos_list
-            level = self.agent_levels[other_a_id]
-            if other_a_id == a_id:
-                obs_type_grid[x, y] = self.AGENT_TYPE
-            else:
-                obs_type_grid[x, y] = self.OTHER_AGENT_TYPE
-            obs_level_grid[x, y] = level
-
-        return np.stack([obs_type_grid, obs_level_grid], axis=0).astype(np.int8)
+    # alternate： full view of the environment
+    # def observe(self, a_id: str) -> ObsType:
+    #     obs_type_grid = np.zeros((self.x_size, self.y_size), dtype=np.int8)
+    #     obs_level_grid = np.zeros((self.x_size, self.y_size), dtype=np.int8)
+    #
+    #     for i, crop_pos in enumerate(self.crop_positions):
+    #         if not self.crop_removed[i]:
+    #             x, y = crop_pos
+    #             obs_type_grid[x, y] = self.CROP_TYPE
+    #             obs_level_grid[x, y] = self.crop_levels[i]
+    #
+    #     for other_a_id, pos_list in self.agent_positions.items():
+    #         if other_a_id not in self.agent_levels:
+    #             continue
+    #         x, y = pos_list
+    #         level = self.agent_levels[other_a_id]
+    #         if other_a_id == a_id:
+    #             obs_type_grid[x, y] = self.AGENT_TYPE
+    #         else:
+    #             obs_type_grid[x, y] = self.OTHER_AGENT_TYPE
+    #         obs_level_grid[x, y] = level
+    #
+    #     return np.stack([obs_type_grid, obs_level_grid], axis=0).astype(np.int8)
 
     def observe(self, a_id: str) -> ObsType:
         g_obs_type = np.zeros((self.x_size, self.y_size), dtype=np.int8)
@@ -230,8 +231,12 @@ class RawEnv(AECEnv, EzPickle):
         g_ymin_actual = max(0, g_ymin)
         g_ymax_actual = min(self.y_size, g_ymax)
 
-        extracted_type_patch = g_obs_type[g_xmin_actual:g_xmax_actual, g_ymin_actual:g_ymax_actual]
-        extracted_level_patch = g_obs_level[g_xmin_actual:g_xmax_actual, g_ymin_actual:g_ymax_actual]
+        extracted_type_patch = g_obs_type[
+            g_xmin_actual:g_xmax_actual, g_ymin_actual:g_ymax_actual
+        ]
+        extracted_level_patch = g_obs_level[
+            g_xmin_actual:g_xmax_actual, g_ymin_actual:g_ymax_actual
+        ]
 
         pad_x_before = max(0, -g_xmin)
         pad_x_after = max(0, g_xmax - self.x_size)
@@ -241,15 +246,15 @@ class RawEnv(AECEnv, EzPickle):
         local_obs_type = np.pad(
             extracted_type_patch,
             ((pad_x_before, pad_x_after), (pad_y_before, pad_y_after)),
-            mode='constant',
-            constant_values=self.PADDING_TYPE
+            mode="constant",
+            constant_values=self.PADDING_TYPE,
         )
 
         local_obs_level = np.pad(
             extracted_level_patch,
-             ((pad_x_before, pad_x_after), (pad_y_before, pad_y_after)),
-             mode='constant',
-             constant_values=self.PADDING_TYPE
+            ((pad_x_before, pad_x_after), (pad_y_before, pad_y_after)),
+            mode="constant",
+            constant_values=self.PADDING_TYPE,
         )
 
         return np.stack([local_obs_type, local_obs_level], axis=0).astype(np.int8)
@@ -317,23 +322,31 @@ class RawEnv(AECEnv, EzPickle):
                         adj_a_ids.append(a_id)
                 level_sum = np.sum(adj_agent_levels)
                 if level_sum >= crop_level >= 0:
+
                     def reward0() -> float:
                         return 6.0
+
                     def reward1() -> float:
                         return 2 * float(crop_level)
 
                     self.crop_removed[crop_idx] = True
-                    total_crop_reward = reward0() if crop_level == 0 else reward1()
+                    total_crop_reward = reward0() if self.reward_idx == 0 else reward1()
 
                     if adj_a_ids:
                         for a_id in adj_a_ids:
-                            local_reward = total_crop_reward * (self.agent_levels[a_id] / level_sum)
+                            local_reward = total_crop_reward * (
+                                self.agent_levels[a_id] / level_sum
+                            )
                             current_step_rewards[a_id] = (
                                 current_step_rewards.get(a_id, 0.0) + local_reward
                             )
-                    for a_id in self.agents:
-                       if not (self.terminations[a_id] or self.truncations[a_id]):
-                           current_step_rewards[a_id] = current_step_rewards.get(a_id, 0.0) + 0.5
+
+                    if self.reward_idx == 1:
+                        for a_id in self.agents:
+                            if not (self.terminations[a_id] or self.truncations[a_id]):
+                                current_step_rewards[a_id] = (
+                                    current_step_rewards.get(a_id, 0.0) + 0.5
+                                )
 
             for a_id in self.agents:
                 if not self._is_invalid_agent(agent):

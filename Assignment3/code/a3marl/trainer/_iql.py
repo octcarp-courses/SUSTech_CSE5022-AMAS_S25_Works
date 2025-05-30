@@ -3,14 +3,15 @@ from itertools import count
 import torch
 from pettingzoo import ParallelEnv
 
-from agents import IqlAgent, DQN
-from envs.utils import EnvConfig
+from a3marl.agents import IqlAgent, DQN
+from a3marl.envs.utils import EnvConfig
 from ._utils import get_agent_wise_cumulative_rewards
 
-from utils import (
+from a3marl.utils import (
     plot_episodes,
     save_episode_acc_to_csv,
 )
+
 
 def update_agent_dqns(
     env_config: EnvConfig,
@@ -152,7 +153,9 @@ def trainer(
                 if done:
                     break
                 rewards_t = {
-                    cur_agent.sid: torch.tensor([[rewards[cur_agent.sid]]], device=device)
+                    cur_agent.sid: torch.tensor(
+                        [[rewards[cur_agent.sid]]], device=device
+                    )
                     for cur_agent in cur_agents.values()
                 }
 
@@ -162,7 +165,9 @@ def trainer(
                         next_state = None
                     else:
                         next_state = torch.tensor(
-                            observations[cur_agent.sid], dtype=torch.float32, device=device
+                            observations[cur_agent.sid],
+                            dtype=torch.float32,
+                            device=device,
                         ).reshape(1, -1)
                     # memorize
                     cur_agent.memorize(
