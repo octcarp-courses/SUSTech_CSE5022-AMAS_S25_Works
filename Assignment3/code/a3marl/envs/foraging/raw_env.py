@@ -3,8 +3,6 @@ import functools
 import numpy as np
 from gymnasium.spaces import Discrete, Box
 from gymnasium.utils import EzPickle
-from mpmath.libmp.libintmath import ifac2
-
 from pettingzoo import AECEnv
 from pettingzoo.utils import AgentSelector, wrappers
 from pettingzoo.utils.conversions import parallel_wrapper_fn
@@ -23,6 +21,19 @@ def env(**kwargs):
 
 parallel_env = parallel_wrapper_fn(env)
 
+ACTION_MAP: dict[int, tuple[int, int]] = {
+    0: (0, 0),  # Stay
+    1: (-1, 0),  # Up
+    2: (1, 0),  # Down
+    3: (0, -1),  # Left
+    4: (0, 1),  # Right
+}
+
+AGENT_TYPE: int = 1
+OTHER_AGENT_TYPE: int = 2
+CROP_TYPE: int = 3
+PADDING_TYPE: int = -1
+
 
 class RawEnv(AECEnv, EzPickle):
     metadata = {
@@ -31,18 +42,6 @@ class RawEnv(AECEnv, EzPickle):
         "is_parallelizable": True,
         "render_fps": 10,
     }
-    ACTION_MAP: dict[int, tuple[int, int]] = {
-        0: (0, 0),  # Stay
-        1: (-1, 0),  # Up
-        2: (1, 0),  # Down
-        3: (0, -1),  # Left
-        4: (0, 1),  # Right
-    }
-
-    AGENT_TYPE: int = 1
-    OTHER_AGENT_TYPE: int = 2
-    CROP_TYPE: int = 3
-    PADDING_TYPE: int = -1
 
     def __init__(
         self,
@@ -50,7 +49,7 @@ class RawEnv(AECEnv, EzPickle):
         y_size: int = 8,
         n_foragers: int = 3,
         n_crops: int = 10,
-        obs_range: int = 3,
+        obs_radius: int = 3,
         forager_levels: list[int] | None = None,
         crop_levels: list[int] | None = None,
         max_cycles: int = 100,
@@ -70,7 +69,7 @@ class RawEnv(AECEnv, EzPickle):
         self.y_size = y_size
         self.n_foragers = n_foragers
         self.n_crops = n_crops
-        self.obs_range = obs_range
+        self.obs_radius = obs_radius
 
         self.forager_levels_config = forager_levels
         self.crop_levels_config = crop_levels
@@ -98,11 +97,12 @@ class RawEnv(AECEnv, EzPickle):
 
     @functools.lru_cache(maxsize=None)
     def observation_space(self, agent) -> Box:
-        return Box(low=0, high=10, shape=(2, self.x_size, self.y_size), dtype=np.int8)
+        local_dim = 2 * self.obs_radius + 1
+        return Box(low=0, high=10, shape=(2, local_dim, local_dim), dtype=np.int8)
 
     @functools.lru_cache(maxsize=None)
     def action_space(self, agent) -> Discrete:
-        return Discrete(len(self.ACTION_MAP), seed=self.np_random_seed)
+        return Discrete(len(ACTION_MAP), seed=self.np_random_seed)
 
     def reset(self, seed=None, options=None) -> ObsType:
         if seed is not None:
@@ -204,7 +204,7 @@ class RawEnv(AECEnv, EzPickle):
             if not self.crop_removed[i]:
                 x, y = crop_pos
                 if 0 <= x < self.x_size and 0 <= y < self.y_size:
-                    g_obs_type[x, y] = self.CROP_TYPE
+                    g_obs_type[x, y] = CROP_TYPE
                     g_obs_level[x, y] = self.crop_levels[i]
 
         for other_a_id, pos in self.agent_positions.items():
@@ -213,18 +213,17 @@ class RawEnv(AECEnv, EzPickle):
 
             if 0 <= x < self.x_size and 0 <= y < self.y_size:
                 if other_a_id == a_id:
-                    g_obs_type[x, y] = self.AGENT_TYPE
+                    g_obs_type[x, y] = AGENT_TYPE
                 else:
-                    g_obs_type[x, y] = self.OTHER_AGENT_TYPE
+                    g_obs_type[x, y] = OTHER_AGENT_TYPE
                 g_obs_level[x, y] = level
 
-        local_dim = 2 * self.obs_range + 1
         a_x, a_y = self.agent_positions[a_id]
 
-        g_xmin = a_x - self.obs_range
-        g_xmax = a_x + self.obs_range + 1
-        g_ymin = a_y - self.obs_range
-        g_ymax = a_y + self.obs_range + 1
+        g_xmin = a_x - self.obs_radius
+        g_xmax = a_x + self.obs_radius + 1
+        g_ymin = a_y - self.obs_radius
+        g_ymax = a_y + self.obs_radius + 1
 
         g_xmin_actual = max(0, g_xmin)
         g_xmax_actual = min(self.x_size, g_xmax)
@@ -247,14 +246,14 @@ class RawEnv(AECEnv, EzPickle):
             extracted_type_patch,
             ((pad_x_before, pad_x_after), (pad_y_before, pad_y_after)),
             mode="constant",
-            constant_values=self.PADDING_TYPE,
+            constant_values=PADDING_TYPE,
         )
 
         local_obs_level = np.pad(
             extracted_level_patch,
             ((pad_x_before, pad_x_after), (pad_y_before, pad_y_after)),
             mode="constant",
-            constant_values=self.PADDING_TYPE,
+            constant_values=PADDING_TYPE,
         )
 
         return np.stack([local_obs_type, local_obs_level], axis=0).astype(np.int8)
@@ -272,7 +271,7 @@ class RawEnv(AECEnv, EzPickle):
             if agent_action == 0:
                 continue
 
-            dx, dy = self.ACTION_MAP[agent_action]
+            dx, dy = ACTION_MAP[agent_action]
             x, y = self.agent_positions[a_id]
             new_x, new_y = x + dx, y + dy
 
@@ -399,6 +398,7 @@ class RawEnv(AECEnv, EzPickle):
                 crop_positions=self.crop_positions,
                 crop_levels=self.crop_levels,
                 crop_removed=self.crop_removed,
+                obs_radius=self.obs_radius,
             )
 
         return None

@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+
 import torch
 from torch import nn
 
@@ -6,7 +8,7 @@ from ._memory import ReplayMemory
 from ._network import DQN
 
 
-class BaseAgent:
+class BaseAgent(ABC):
     def __init__(
         self, sid: str, config: BaseAgentConfig, act_sampler: callable, device=None
     ) -> None:
@@ -45,11 +47,13 @@ class BaseAgent:
     def select_action_greedy(self, state: torch.Tensor, dqn: nn.Module, **kwargs):
         return self._select_action_eps(state, dqn=dqn, eps=0, **kwargs)
 
+    @abstractmethod
     def _select_action_eps(self, state, dqn, eps=-1, **kwargs):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def train(self) -> None:
-        raise NotImplementedError
+        pass
 
     def memorize(self, *args) -> None:
         self.replay_memory.push(*args)

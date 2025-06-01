@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-
+from copy import deepcopy
 from pettingzoo import ParallelEnv
 
 
@@ -11,7 +11,7 @@ class EnvConfig:
 
     def get_env(self, **override_kwargs) -> ParallelEnv:
         if override_kwargs is not None:
-            final_kwargs = self.env_kwargs.copy()
+            final_kwargs = deepcopy(self.env_kwargs)
             final_kwargs.update(override_kwargs)
             return self.env_creator(**final_kwargs)
         else:

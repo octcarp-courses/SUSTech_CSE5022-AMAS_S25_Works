@@ -10,7 +10,7 @@ from ._utils import get_agent_wise_cumulative_rewards
 
 from a3marl.utils import (
     plot_episodes,
-    save_episode_acc_to_csv,
+    save_episode_ret_to_csv,
 )
 
 
@@ -183,6 +183,6 @@ def trainer(
         episode_means.append(cur_policy_mean)
         if episode % 10 == 0 or episode == num_episodes - 1:
             print(f"Episode {episode}: Avg return = {cur_policy_mean:.4f};")
-            save_episode_acc_to_csv(episode_means, f"{env_config.name_abbr}_cql")
+            save_episode_ret_to_csv(episode_means, f"{env_config.name_abbr}_cql")
         if show_plot:
             plot_episodes(episode_means)

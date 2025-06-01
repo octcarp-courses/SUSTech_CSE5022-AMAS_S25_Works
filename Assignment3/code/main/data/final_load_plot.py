@@ -1,6 +1,5 @@
 import os
-import pandas as pd
-from a3marl.utils import plot_episodes
+from a3marl.utils import plot_episodes, load_episode_ret_from_csv
 
 _CSV_FOLDER: str = "./final/"
 _IMG_FOLDER: str = "./img_out/"
@@ -11,8 +10,7 @@ def load_data_and_plot(
     plot_title: str = "Episode Means",
 ) -> None:
     file_path = os.path.join(_CSV_FOLDER, f"{file_name}.csv")
-    df = pd.read_csv(file_path)
-    episode_mean_list: list[float] = df["Episode Mean"].astype(float).tolist()
+    episode_mean_list = load_episode_ret_from_csv(file_path=file_path)
     plot_episodes(
         episode_mean_list,
         title=plot_title,
