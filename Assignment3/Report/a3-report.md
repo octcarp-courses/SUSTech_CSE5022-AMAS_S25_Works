@@ -96,7 +96,7 @@ For specific code explanations, I will focus on the parts that I modify. But I s
 │  │  │
 │  │  ├─foraging  # level-based foraging env
 │  │  │      raw_env.py  # env main design
-│  │  │      _render.py  # render
+│  │  │      render.py  # render
 │  │  │      __init__.py
 │  │  │
 │  │  └─utils  # env config base
@@ -154,42 +154,6 @@ class DQN(nn.Module):
 ```
 
 For the MLP DQN, I change integer `hidden_dim` to a list `hidden_dims` , in order to try to bring some scalability in the MLP structure.
-
-#### Memory
-
-```python
-import numpy as np
-from collections import namedtuple, deque
-
-# state: 1 x obs_dim
-# action: 1 x 1
-# reward: 1 x 1
-Transition = namedtuple("Transition", ("state", "action", "next_state", "reward"))
-
-
-class ReplayMemory:
-    def __init__(self, capacity: int = 10_000) -> None:
-        self.memory: deque[Transition] = deque([], maxlen=capacity)
-
-    def push(self, *args) -> None:
-        """Save a transition"""
-        self.memory.append(Transition(*args))
-
-    def sample(self, batch_size: int) -> list[Transition]:
-        if len(self.memory) < batch_size:
-            raise ValueError(
-                f"Not enough {len(self.memory)} samples for batch size: {batch_size}"
-            )
-        return np.random.choice(self.memory, size=batch_size, replace=False).tolist()
-
-    def __len__(self) -> int:
-        return len(self.memory)
-
-```
-
-In Memory part, I follow lab, abstract the quadruple into a `Transition` type. The type store the state, action, next_state, reward, in line with the conventions of deep Q learning.
-
-Then, when need to sample transition from memory, the `sample()` will return a list witch size is batch size. I use `numpy` for the sample, attempting to achieve higher efficiency.
 
 ### Train Design
 
@@ -257,7 +221,7 @@ It has three member variables:
 
 - `name_abbr` : It gives the environment a name.
 - `env_creator` : Callable function to create the environment.
-- `env_kwargs` : A dictionary to create the
+- `env_kwargs` : A dictionary, have the parameters key-value to create the environment.
 
 To create a *pettingzoo* environment, just call `get_env` function of the `EnvConfig` instance.
 
@@ -374,9 +338,13 @@ As can be seen from the figure, the curve has an increasing trend in the learnin
 
 Similarly, under CQL, the return value also tends to rise.
 
-Compared with IQL training, CQL training is faster (only one central DQN network needs to be maintained). And because CQL is easier to find the global optimal value than IQL, the curve of CQL is relatively smoother than that of IQL.
+#### IQL and CQL Analysis
 
-However, due to the problem of the explosion of the output action dimension, the application scope of CQL is relatively limited.
+In terms of training time, compared with IQL training, CQL training is faster. In practice, only one central DQN network needs to be maintained. There's no need to select different agents and sample memory for each agent each time. For the CQL central agent, it can perform only one memory sampling to obtain a larger batch of relevant data that includes all the agent's memory content. And use GPU to process computing tasks in parallel at once, quickly calculating results through a DQN.
+
+Because CQL uses a shared global Q-function across all agents, it can effectively leverage global information to achieve more coordinated decision-making. As a result, CQL tends to find the global optimal more efficiently, leading to a smoother performance curve compared to the more erratic curve of IQL, where agents learn independently without global coordination.
+
+The specific settings of the experiment also conform to our previous analysis: for pure CQL, it often faces the problem of exploding output dimensions, which limits its application scope. In order to adapt him to the environment, we had to change the settings of the environment: we reduced the size of the 2D world to give Pursuer more opportunities to complete the catch.
 
 #### Foraging Reward Type 0
 
@@ -386,9 +354,15 @@ However, due to the problem of the explosion of the output action dimension, the
 
 ![fo_iql_r1](./img/result/fo_iql_r1.png)
 
-It can be seen that under the two different reward functions, IQL learning increases the return value.
+It can be observed that under both reward functions, IQL results in an increase in the return value, reflecting the ability of IQL to improve performance over time.
 
-The average return value of Type 1 is higher, which may be related to the small reward given to all agents after each harvest. In this way, on average, the overall reward value of Type 1 will be higher.
+#### Foraging Analysis
+
+Specifically, the average return value have an increase trend, reflecting the ability of IQL to improve performance over time.
+
+The average return value of Type 1 reward function is higher compared to Type 0, which may be related to the small reward given to all agents after each harvest. In this way, on average, the overall reward value of Type 1 will be higher. And this design leads to a higher reward value, as agents my receive consistent feedback that contributes to gradual improvements in their policy.
+
+And some additional discussion is  in PROBLEMS 2 part.
 
 ### Parameter Setup
 
@@ -428,4 +402,10 @@ In my implement of Pursuit, I follow the code from lab tutorial.
 When I increase the number of pursuers, the output dimension occurred exponential explosion: if there are $n$ pursuers, the output dimension is $5^n$ , even if $n=8$ by default, the $5^8$ output dim is still difficult for a MLP to inference.
 
 So I changed the configuration, reducing the number of pursuers to $6$, but at the same time changed the size the map from the default $16 \times 16$ to $12 \times 12$, to give the pursuers a better chance of catching the evaders.
+
+### DQN Update Opportunities
+
+I noticed that in my training implementation, updates mainly occurred in the first 10% of training. After a rapid rise in the early stage, it is difficult for the `best_mean` value to reach a higher value, which means that DQN will have few opportunities to update in the later stages of training.
+
+Perhaps I should introduce a reasonable decay value for `best_mean`, or other dynamic evaluation methods, to give the model more opportunities to update. However, such an implementation is more complicated and I don't have a theoretical guarantee, so I didn't implement it.
 

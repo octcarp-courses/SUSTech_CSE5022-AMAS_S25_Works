@@ -9,7 +9,7 @@ from pettingzoo.utils.conversions import parallel_wrapper_fn
 
 from pettingzoo.utils.env import ObsType
 
-from ._render import ForagingRenderer
+from .render import ForagingRenderer
 
 
 def env(**kwargs):
@@ -381,7 +381,7 @@ class RawEnv(AECEnv, EzPickle):
 
     def render(self) -> None:
         if self.render_mode is None:
-            return None
+            return
 
         if self.render_mode == "human":
             if self._renderer is None:
@@ -401,4 +401,4 @@ class RawEnv(AECEnv, EzPickle):
                 obs_radius=self.obs_radius,
             )
 
-        return None
+        return

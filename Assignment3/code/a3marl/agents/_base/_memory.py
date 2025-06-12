@@ -1,4 +1,5 @@
-import numpy as np
+import random
+
 from collections import namedtuple, deque
 
 # state: 1 x obs_dim
@@ -20,7 +21,7 @@ class ReplayMemory:
             raise ValueError(
                 f"Not enough {len(self.memory)} samples for batch size: {batch_size}"
             )
-        return np.random.choice(self.memory, size=batch_size, replace=False).tolist()
+        return random.sample(self.memory, batch_size)
 
     def __len__(self) -> int:
         return len(self.memory)
