@@ -2,7 +2,7 @@
 
 | My Score | Average | Median |
 | -------- | ------- | ------ |
-| 100      | 87.68   | 100    |
+| 100      | 92.70   | 100    |
 
 ### Feedback from TA
 
